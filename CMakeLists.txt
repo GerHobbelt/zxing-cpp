@@ -10,11 +10,7 @@ option (BUILD_UNIT_TESTS "Build the unit tests (don't enable for production buil
 option (BUILD_PYTHON_MODULE "Build the python module" OFF)
 set(BUILD_DEPENDENCIES "AUTO" CACHE STRING "Fetch from github or use locally installed (AUTO/GITHUB/LOCAL)")
 
-if (WIN32)
-    option (BUILD_SHARED_LIBS "Build and link as shared library" OFF)
-else()
-    option (BUILD_SHARED_LIBS "Build and link as shared library" ON)
-endif()
+option (BUILD_SHARED_LIBS "Build and link as shared library" OFF)
 
 if (MSVC)
     option (LINK_CPP_STATICALLY "MSVC only, link standard library statically (/MT and /MTd)" OFF)

@@ -18,3 +18,8 @@ endif()
 
 add_library(zxing ZXingReader.cpp include/ZXingReader.h)
 target_link_libraries(zxing ZXing::ZXing)
+add_custom_target(combined ALL
+    COMMAND libtool -static -o ${CMAKE_BINARY_DIR}/libZXing.a $<TARGET_FILE:zxing> $<TARGET_FILE:ZXing::ZXing>
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    DEPENDS zxing ZXing::ZXing
+)

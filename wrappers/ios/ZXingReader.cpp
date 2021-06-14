@@ -19,6 +19,8 @@ void read_barcode(const uint8_t* bytes, int32_t width, int32_t height, int32_t c
 	hints.setTryHarder(0);
 	const auto imgfmt = channels == 1 ? ImageFormat::Lum : ImageFormat::BGRX;
 	auto r = ReadBarcode({bytes, width, height, imgfmt, width * channels, channels}, hints);
-	strcpy(out->text, TextUtfEncoding::ToUtf8(r.text()).c_str());	
+	auto txt = TextUtfEncoding::ToUtf8(r.text());
+	out->length = txt.length();	
+	strcpy(out->text, txt.c_str());
 	out->format = Format(r.format());
 }

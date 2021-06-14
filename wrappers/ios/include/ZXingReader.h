@@ -27,6 +27,7 @@ typedef enum {
 typedef struct {
 	Format format;
 	char text[256];
+	int32_t length;
 } ZXingResult;
 void read_barcode(const uint8_t* buf, int32_t width, int32_t height, int32_t channels, Format format, ZXingResult* out);
 #ifdef __cplusplus

@@ -469,7 +469,7 @@ install (
     INCLUDES DESTINATION include
 )
 
-if(MSVC)
+if(MSVC AND OFF)
     set_target_properties(ZXing PROPERTIES
         COMPILE_PDB_NAME ZXing
         COMPILE_PDB_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})

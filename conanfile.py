@@ -68,6 +68,6 @@ class ZXingCppConan(ConanFile):
         self.cpp_info.names["cmake_find_package"] = "ZXing"
         self.cpp_info.names["cmake_find_package_multi"] = "ZXing"
         self.cpp_info.names["pkg_config"] = "zxing"
-        self.cpp_info.libs = ["ZXingCore"]
+        self.cpp_info.libs = ["ZXing"]
         if self.settings.os == "Linux":
             self.cpp_info.system_libs = ["pthread", "m"]

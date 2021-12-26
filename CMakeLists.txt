@@ -9,11 +9,7 @@ option (BUILD_BLACKBOX_TESTS "Build the black box reader/writer tests" ON)
 option (BUILD_UNIT_TESTS "Build the unit tests (don't enable for production builds)" OFF)
 option (BUILD_PYTHON_MODULE "Build the python module" OFF)
 
-if (WIN32)
-    option (BUILD_SHARED_LIBS "Build and link as shared library" OFF)
-else()
-    option (BUILD_SHARED_LIBS "Build and link as shared library" ON)
-endif()
+option (BUILD_SHARED_LIBS "Build and link as shared library" OFF)
 
 if (MSVC)
     option (LINK_CPP_STATICALLY "MSVC only, link standard library statically (/MT and /MTd)" OFF)

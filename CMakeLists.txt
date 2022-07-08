@@ -1,13 +1,30 @@
 cmake_minimum_required (VERSION 3.10)
 
+set( MB_MODERN_APPLE_BUILD ON )
+
+if( NOT EXISTS "${CMAKE_BINARY_DIR}/mb_conan_build.cmake" )
+    message( STATUS "Downloading mb_conan_build.cmake from https://github.com/microblink/conan-build-helper" )
+    file( DOWNLOAD "https://raw.githubusercontent.com/microblink/conan-build-helper/master/mb_conan_build.cmake" "${CMAKE_BINARY_DIR}/mb_conan_build.cmake" )
+endif()
+
+include( ${CMAKE_BINARY_DIR}/mb_conan_build.cmake )
+
 project (ZXing VERSION "1.2.0" LANGUAGES CXX)
 
 option (BUILD_WRITERS "Build with writer support (encoders)" ON)
 option (BUILD_READERS "Build with reader support (decoders)" ON)
-option (BUILD_EXAMPLES "Build the example barcode reader/writer applicatons" ON)
-option (BUILD_BLACKBOX_TESTS "Build the black box reader/writer tests" ON)
+option (BUILD_EXAMPLES "Build the example barcode reader/writer applicatons" OFF)
+option (BUILD_BLACKBOX_TESTS "Build the black box reader/writer tests" OFF)
 option (BUILD_UNIT_TESTS "Build the unit tests (don't enable for production builds)" OFF)
 option (BUILD_PYTHON_MODULE "Build the python module" OFF)
+
+# Implementation note:
+# Unfortunately, this project uses c++ exceptions, so we need to enable
+# them.
+#                                         (08.07.2022. Nenad Miksa)
+#
+
+add_compile_options( ${TNUN_compiler_exceptions_on} )
 
 option (BUILD_SHARED_LIBS "Build and link as shared library" OFF)
 
@@ -120,3 +137,6 @@ install (
         "${CMAKE_CURRENT_BINARY_DIR}/ZXingConfigVersion.cmake"
     DESTINATION ${CMAKECONFIG_INSTALL_DIR}
 )
+
+include(print_info_main)
+print_info_main()

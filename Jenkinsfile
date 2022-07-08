@@ -1,4 +1,4 @@
-@Library( 'JenkinsPipelineScripts@v15.6.13' ) _
+@Library( 'JenkinsPipelineScripts@feature/bb-api-only-for-bitbucket/TSI-1752' ) _
 
 import com.microblink.jenkins.conan.*
 import com.microblink.jenkins.environment.*

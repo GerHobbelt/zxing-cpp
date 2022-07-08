@@ -3,3 +3,4 @@ CMakeLists.txt.user
 *.vim
 compile_commands.json
 .cache
+build

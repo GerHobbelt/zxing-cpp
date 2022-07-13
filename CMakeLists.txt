@@ -26,6 +26,10 @@ option (BUILD_PYTHON_MODULE "Build the python module" OFF)
 
 add_compile_options( ${TNUN_compiler_exceptions_on} )
 
+if ( CLANG AND MB_ENABLE_RUNTIME_CHECKS AND NOT CMAKE_CROSSCOMPILING )
+    add_compile_options( -fsanitize=address )
+endif()
+
 option (BUILD_SHARED_LIBS "Build and link as shared library" OFF)
 
 if (MSVC)

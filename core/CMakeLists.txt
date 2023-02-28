@@ -694,6 +694,23 @@ if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
     endif()
 endif()
 
+if (APPLE AND BUILD_APPLE_FRAMEWORK)
+    set_target_properties(ZXing PROPERTIES
+        FRAMEWORK TRUE
+        FRAMEWORK_VERSION "C"
+        XCODE_ATTRIBUTE_DEFINES_MODULE YES
+        XCODE_ATTRIBUTE_BUILD_LIBRARY_FOR_DISTRIBUTION YES
+        XCODE_ATTRIBUTE_MODULEMAP_FILE "wrappers/ios/Sources/Wrapper/module.modulemap"
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+        MACOSX_FRAMEWORK_IDENTIFIER "com.zxing-cpp.ios"
+        CMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH NO
+        #MACOSX_FRAMEWORK_INFO_PLIST Info.plist
+        PUBLIC_HEADER "${PUBLIC_HEADERS}"
+        XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "iPhone Developer"
+        XCODE_ATTRIBUTE_ENABLE_BITCODE "NO"
+    )
+endif()
+
 # MARK: - Installation
 
 include (GNUInstallDirs)

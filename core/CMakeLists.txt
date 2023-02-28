@@ -496,7 +496,9 @@ if (APPLE AND BUILD_APPLE_FRAMEWORK)
     )
 endif()
 
-include (GNUInstallDirs)
+set(CMAKE_INSTALL_LIBDIR "lib")
+set(CMAKE_INSTALL_BINDIR "bin")
+set(CMAKE_INSTALL_INCLUDEDIR "include")
 
 set(ZX_INSTALL_TARGETS ZXing)
 

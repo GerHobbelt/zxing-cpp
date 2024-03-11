@@ -16,16 +16,11 @@ android {
 
         ndk {
             // speed up build: compile only arm versions
-
-            //noinspection ChromeOsAbiSupport
-            abiFilters += "armeabi-v7a"
-
-            //noinspection ChromeOsAbiSupport
-            abiFilters += "arm64-v8a"
+            // abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
         externalNativeBuild {
             cmake {
-                arguments("-DCMAKE_BUILD_TYPE=RelWithDebInfo")
+                arguments("-DCMAKE_BUILD_TYPE=RelWithDebInfo", "-DANDROID_ARM_NEON=ON", "-DBUILD_WRITERS=OFF")
             }
         }
 

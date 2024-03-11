@@ -5,7 +5,7 @@
 #import "ZXIBarcodeReader.h"
 #import "ReadBarcode.h"
 #import "ImageView.h"
-#import "Result.h"
+#import "Barcode.h"
 #import "GTIN.h"
 #import "ZXIFormatHelper.h"
 #import "ZXIPosition+Helper.h"
@@ -33,6 +33,10 @@ ZXIGTIN *getGTIN(const Result &result) {
         return nullptr;
     }
 }
+
+@interface ZXIReaderOptions()
+@property(nonatomic) ZXing::ReaderOptions cppOpts;
+@end
 
 @interface ZXIBarcodeReader()
 @property (nonatomic, strong) CIContext* ciContext;
@@ -116,28 +120,10 @@ ZXIGTIN *getGTIN(const Result &result) {
     return [self readImageView:imageView error:error];
 }
 
-+ (ReaderOptions)ReaderOptionsFromZXIReaderOptions:(ZXIReaderOptions*)options {
-    BarcodeFormats formats;
-    for(NSNumber* flag in options.formats) {
-        formats.setFlag(BarcodeFormatFromZXIFormat((ZXIFormat)flag.integerValue));
-    }
-    ReaderOptions cppOpts = ReaderOptions()
-        .setFormats(formats)
-        .setTryRotate(options.tryRotate)
-        .setTryHarder(options.tryHarder)
-        .setTryInvert(options.tryInvert)
-        .setTryDownscale(options.tryDownscale)
-        .setTryCode39ExtendedMode(options.tryCode39ExtendedMode)
-        .setValidateCode39CheckSum(options.validateCode39CheckSum)
-        .setValidateITFCheckSum(options.validateITFCheckSum)
-        .setMaxNumberOfSymbols(options.maxNumberOfSymbols);
-    return cppOpts;
-}
-
 - (NSArray<ZXIResult*> *)readImageView:(ImageView)imageView
                                  error:(NSError *__autoreleasing _Nullable *)error {
     try {
-        Results results = ReadBarcodes(imageView, [ZXIBarcodeReader ReaderOptionsFromZXIReaderOptions:self.options]);
+        Barcodes results = ReadBarcodes(imageView, self.options.cppOpts);
         NSMutableArray* zxiResults = [NSMutableArray array];
         for (auto result: results) {
             [zxiResults addObject:

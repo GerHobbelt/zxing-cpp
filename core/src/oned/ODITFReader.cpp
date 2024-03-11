@@ -8,10 +8,8 @@
 
 #include "ReaderOptions.h"
 #include "GTIN.h"
-#include "Result.h"
+#include "Barcode.h"
 #include "ZXAlgorithms.h"
-
-#include <array>
 
 namespace ZXing::OneD {
 
@@ -19,7 +17,7 @@ constexpr auto START_PATTERN_ = FixedPattern<4, 4>{1, 1, 1, 1};
 constexpr auto STOP_PATTERN_1 = FixedPattern<3, 4>{2, 1, 1};
 constexpr auto STOP_PATTERN_2 = FixedPattern<3, 5>{3, 1, 1};
 
-Result ITFReader::decodePattern(int rowNumber, PatternView& next, std::unique_ptr<DecodingState>&) const
+Barcode ITFReader::decodePattern(int rowNumber, PatternView& next, std::unique_ptr<DecodingState>&) const
 {
 	const int minCharCount = 6;
 	const int minQuietZone = 10;
@@ -65,12 +63,14 @@ Result ITFReader::decodePattern(int rowNumber, PatternView& next, std::unique_pt
 	if (!IsRightGuard(next, STOP_PATTERN_1, minQuietZone) && !IsRightGuard(next, STOP_PATTERN_2, minQuietZone))
 		return {};
 
+	Error error = _opts.validateITFCheckSum() && !GTIN::IsCheckDigitValid(txt) ? ChecksumError() : Error();
+
 	// Symbology identifier ISO/IEC 16390:2007 Annex C Table C.1
 	// See also GS1 General Specifications 5.1.2 Figure 5.1.2-2
 	SymbologyIdentifier symbologyIdentifier = {'I', GTIN::IsCheckDigitValid(txt) ? '1' : '0'};
 	
 	int xStop = next.pixelsTillEnd();
-	return Result(txt, rowNumber, xStart, xStop, BarcodeFormat::ITF, symbologyIdentifier);
+	return Barcode(txt, rowNumber, xStart, xStop, BarcodeFormat::ITF, symbologyIdentifier, error);
 }
 
 } // namespace ZXing::OneD

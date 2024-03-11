@@ -7,8 +7,7 @@
 #include "ODCode39Reader.h"
 
 #include "ReaderOptions.h"
-#include "DecoderResult.h"
-#include "Result.h"
+#include "Barcode.h"
 #include "ZXAlgorithms.h"
 
 #include <array>
@@ -74,7 +73,7 @@ std::string DecodeCode39AndCode93FullASCII(std::string encoded, const char ctrl[
 	return encoded;
 }
 
-Result Code39Reader::decodePattern(int rowNumber, PatternView& next, std::unique_ptr<RowReader::DecodingState>&) const
+Barcode Code39Reader::decodePattern(int rowNumber, PatternView& next, std::unique_ptr<RowReader::DecodingState>&) const
 {
 	// minimal number of characters that must be present (including start, stop and checksum characters)
 	int minCharCount = _opts.validateCode39CheckSum() ? 4 : 3;
@@ -122,7 +121,7 @@ Result Code39Reader::decodePattern(int rowNumber, PatternView& next, std::unique
 		txt.push_back(lastChar);
 
 	const char shiftChars[] = "$%/+";
-	auto fullASCII = DecodeCode39AndCode93FullASCII(txt, shiftChars);
+	auto fullASCII = _opts.tryCode39ExtendedMode() ? DecodeCode39AndCode93FullASCII(txt, shiftChars) : "";
 	bool hasFullASCII = !fullASCII.empty() && std::find_first_of(txt.begin(), txt.end(), shiftChars, shiftChars + 4) != txt.end();
 	if (hasFullASCII)
 		txt = fullASCII;
@@ -130,12 +129,14 @@ Result Code39Reader::decodePattern(int rowNumber, PatternView& next, std::unique
 	if (hasValidCheckSum)
 		txt.push_back(lastChar);
 
+	Error error = _opts.validateCode39CheckSum() && !hasValidCheckSum ? ChecksumError() : Error();
+
 	// Symbology identifier modifiers ISO/IEC 16388:2007 Annex C Table C.1
 	constexpr const char symbologyModifiers[4] = { '0', '1' /*checksum*/, '4' /*full ASCII*/, '5' /*checksum + full ASCII*/ };
 	SymbologyIdentifier symbologyIdentifier = {'A', symbologyModifiers[(int)hasValidCheckSum + 2 * (int)hasFullASCII]};
 
 	int xStop = next.pixelsTillEnd();
-	return Result(std::move(txt), rowNumber, xStart, xStop, BarcodeFormat::Code39, symbologyIdentifier);
+	return {std::move(txt), rowNumber, xStart, xStop, BarcodeFormat::Code39, symbologyIdentifier, error};
 }
 
 } // namespace ZXing::OneD

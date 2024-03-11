@@ -17,53 +17,12 @@
     return self;
 }
 
-- (instancetype)initWithFormats:(NSArray<NSNumber*>*)formats
-                      tryHarder:(BOOL)tryHarder
-                      tryRotate:(BOOL)tryRotate
-                      tryInvert:(BOOL)tryInvert
-                   tryDownscale:(BOOL)tryDownscale
-                         isPure:(BOOL)isPure
-                      binarizer:(ZXIBinarizer)binarizer
-                downscaleFactor:(NSInteger)downscaleFactor
-             downscaleThreshold:(NSInteger)downscaleThreshold
-                   minLineCount:(NSInteger)minLineCount
-             maxNumberOfSymbols:(NSInteger)maxNumberOfSymbols
-          tryCode39ExtendedMode:(BOOL)tryCode39ExtendedMode
-         validateCode39CheckSum:(BOOL)validateCode39CheckSum
-            validateITFCheckSum:(BOOL)validateITFCheckSum
-          returnCodabarStartEnd:(BOOL)returnCodabarStartEnd
-                   returnErrors:(BOOL)returnErrors
-                 eanAddOnSymbol:(ZXIEanAddOnSymbol)eanAddOnSymbol
-                       textMode:(ZXITextMode)textMode {
-    self = [super init];
-    self.cppOpts = ZXing::ReaderOptions();
-    self.formats = formats;
-    self.tryHarder = tryHarder;
-    self.tryRotate = tryRotate;
-    self.tryInvert = tryInvert;
-    self.tryDownscale = tryDownscale;
-    self.isPure = isPure;
-    self.binarizer = binarizer;
-    self.downscaleFactor = downscaleFactor;
-    self.downscaleThreshold = downscaleThreshold;
-    self.minLineCount = minLineCount;
-    self.maxNumberOfSymbols = maxNumberOfSymbols;
-    self.tryCode39ExtendedMode = tryCode39ExtendedMode;
-    self.validateCode39CheckSum = validateCode39CheckSum;
-    self.validateITFCheckSum = validateITFCheckSum;
-    self.returnCodabarStartEnd = returnCodabarStartEnd;
-    self.returnErrors = returnErrors;
-    self.eanAddOnSymbol = eanAddOnSymbol;
-    self.textMode = textMode;
-    return self;
-}
-
 -(BOOL)tryHarder {
     return self.cppOpts.tryHarder();
 }
 
 -(void)setTryHarder:(BOOL)tryHarder {
-    self.cppOpts.setTryHarder(tryHarder);
+    self.cppOpts = self.cppOpts.setTryHarder(tryHarder);
 }
 
 -(BOOL)tryRotate {
@@ -71,7 +30,7 @@
 }
 
 -(void)setTryRotate:(BOOL)tryRotate {
-    self.cppOpts.setTryRotate(tryRotate);
+    self.cppOpts = self.cppOpts.setTryRotate(tryRotate);
 }
 
 -(BOOL)tryInvert {
@@ -79,7 +38,7 @@
 }
 
 -(void)setTryInvert:(BOOL)tryInvert {
-    self.cppOpts.setTryInvert(tryInvert);
+    self.cppOpts = self.cppOpts.setTryInvert(tryInvert);
 }
 
 -(BOOL)tryDownscale {
@@ -87,7 +46,7 @@
 }
 
 -(void)setTryDownscale:(BOOL)tryDownscale {
-    self.cppOpts.setTryDownscale(tryDownscale);
+    self.cppOpts = self.cppOpts.setTryDownscale(tryDownscale);
 }
 
 -(BOOL)isPure {
@@ -95,7 +54,7 @@
 }
 
 -(void)setIsPure:(BOOL)isPure {
-    self.cppOpts.setIsPure(isPure);
+    self.cppOpts = self.cppOpts.setIsPure(isPure);
 }
 
 -(ZXIBinarizer)binarizer {
@@ -127,7 +86,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setBinarizer:(ZXIBinarizer)binarizer {
-    self.cppOpts.setBinarizer(toNativeBinarizer(binarizer));
+    self.cppOpts = self.cppOpts.setBinarizer(toNativeBinarizer(binarizer));
 }
 
 -(NSInteger)downscaleFactor {
@@ -135,7 +94,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setDownscaleFactor:(NSInteger)downscaleFactor {
-    self.cppOpts.setDownscaleFactor(downscaleFactor);
+    self.cppOpts = self.cppOpts.setDownscaleFactor(downscaleFactor);
 }
 
 -(NSInteger)downscaleThreshold {
@@ -143,7 +102,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setDownscaleThreshold:(NSInteger)downscaleThreshold {
-    self.cppOpts.setDownscaleThreshold(downscaleThreshold);
+    self.cppOpts = self.cppOpts.setDownscaleThreshold(downscaleThreshold);
 }
 
 -(NSInteger)minLineCount {
@@ -151,7 +110,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setMinLineCount:(NSInteger)minLineCount {
-    self.cppOpts.setMinLineCount(minLineCount);
+    self.cppOpts = self.cppOpts.setMinLineCount(minLineCount);
 }
 
 - (NSInteger)maxNumberOfSymbols {
@@ -159,7 +118,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setMaxNumberOfSymbols:(NSInteger)maxNumberOfSymbols {
-    self.cppOpts.setMaxNumberOfSymbols(maxNumberOfSymbols);
+    self.cppOpts = self.cppOpts.setMaxNumberOfSymbols(maxNumberOfSymbols);
 }
 
 -(BOOL)tryCode39ExtendedMode {
@@ -167,7 +126,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setTryCode39ExtendedMode:(BOOL)tryCode39ExtendedMode {
-    self.cppOpts.setTryCode39ExtendedMode(tryCode39ExtendedMode);
+    self.cppOpts = self.cppOpts.setTryCode39ExtendedMode(tryCode39ExtendedMode);
 }
 
 -(BOOL)validateCode39CheckSum {
@@ -175,7 +134,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setValidateCode39CheckSum:(BOOL)validateCode39CheckSum {
-    self.cppOpts.setValidateCode39CheckSum(validateCode39CheckSum);
+    self.cppOpts = self.cppOpts.setValidateCode39CheckSum(validateCode39CheckSum);
 }
 
 -(BOOL)validateITFCheckSum {
@@ -183,7 +142,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setValidateITFCheckSum:(BOOL)validateITFCheckSum {
-    self.cppOpts.setValidateITFCheckSum(validateITFCheckSum);
+    self.cppOpts = self.cppOpts.setValidateITFCheckSum(validateITFCheckSum);
 }
 
 -(BOOL)returnCodabarStartEnd {
@@ -191,7 +150,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setReturnCodabarStartEnd:(BOOL)returnCodabarStartEnd {
-    self.cppOpts.setReturnCodabarStartEnd(returnCodabarStartEnd);
+    self.cppOpts = self.cppOpts.setReturnCodabarStartEnd(returnCodabarStartEnd);
 }
 
 -(BOOL)returnErrors {
@@ -199,7 +158,7 @@ ZXing::Binarizer toNativeBinarizer(ZXIBinarizer binarizer) {
 }
 
 -(void)setReturnErrors:(BOOL)returnErrors {
-    self.cppOpts.setReturnErrors(returnErrors);
+    self.cppOpts = self.cppOpts.setReturnErrors(returnErrors);
 }
 
 -(ZXIEanAddOnSymbol)eanAddOnSymbol {
@@ -227,7 +186,7 @@ ZXing::EanAddOnSymbol toNativeEanAddOnSymbol(ZXIEanAddOnSymbol eanAddOnSymbol) {
 }
 
 -(void)setEanAddOnSymbol:(ZXIEanAddOnSymbol)eanAddOnSymbol {
-    self.cppOpts.setEanAddOnSymbol(toNativeEanAddOnSymbol(eanAddOnSymbol));
+    self.cppOpts = self.cppOpts.setEanAddOnSymbol(toNativeEanAddOnSymbol(eanAddOnSymbol));
 }
 
 -(ZXITextMode)textMode {
@@ -263,7 +222,7 @@ ZXing::TextMode toNativeTextMode(ZXITextMode mode) {
 }
 
 -(void)setTextMode:(ZXITextMode)textMode {
-    self.cppOpts.setTextMode(toNativeTextMode(textMode));
+    self.cppOpts = self.cppOpts.setTextMode(toNativeTextMode(textMode));
 }
 
 @end

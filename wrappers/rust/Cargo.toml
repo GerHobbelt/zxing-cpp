@@ -1,6 +1,6 @@
 [package]
 name = "zxing-cpp"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 # authors = ["Axel Waggershauser <zxingcpp@gmail.com>"]
 license = "Apache-2.0"
@@ -12,7 +12,12 @@ categories = ["api-bindings", "computer-vision"]
 exclude = [
     "core/**/*Write*",
     "core/**/*Encode*",
+    "core/src/libzint/**",
 ]
+
+[lib]
+name = "zxingcpp"
+path = "src/lib.rs"
 
 [features]
 default = []
@@ -20,15 +25,15 @@ image = ["dep:image"]
 bundled = []
 
 [dependencies]
-paste = "1.0.14"
+thiserror = "1.0"
+paste = "1.0"
 flagset = "0.4.4"
-image = {version = "0.24.7", optional = true}
+image = {version = "0.24.8", optional = true}
 
 [dev-dependencies]
-cfg-if = "1.0.0"
-anyhow = "1.0.79"
-clap = {version = "4.4.13", features = ["derive"]}
-image = {version = "0.24.7"}
+cfg-if = "1.0"
+anyhow = "1.0"
+image = {version = "0.24.8"}
 
 [build-dependencies]
 cmake = {version = "0.1.50"}

@@ -4,11 +4,21 @@
 */
 // SPDX-License-Identifier: Apache-2.0
 
-#include "Result.h"
+#include "Barcode.h"
 
 #include "DecoderResult.h"
-#include "TextDecoder.h"
+#include "DetectorResult.h"
 #include "ZXAlgorithms.h"
+
+#ifdef ZXING_BUILD_EXPERIMENTAL_API
+#include "BitMatrix.h"
+#endif
+
+#ifdef ZXING_USE_ZINT
+#include <zint.h>
+#else
+struct zint_symbol {};
+#endif
 
 #include <cmath>
 #include <list>
@@ -25,15 +35,18 @@ Result::Result(const std::string& text, int y, int xStart, int xStop, BarcodeFor
 	  _readerInit(readerInit)
 {}
 
-Result::Result(DecoderResult&& decodeResult, Position&& position, BarcodeFormat format)
+Result::Result(DecoderResult&& decodeResult, DetectorResult&& detectorResult, BarcodeFormat format)
 	: _content(std::move(decodeResult).content()),
 	  _error(std::move(decodeResult).error()),
-	  _position(std::move(position)),
+	  _position(std::move(detectorResult).position()),
 	  _sai(decodeResult.structuredAppend()),
 	  _format(format),
 	  _lineCount(decodeResult.lineCount()),
 	  _isMirrored(decodeResult.isMirrored()),
 	  _readerInit(decodeResult.readerInit())
+#ifdef ZXING_BUILD_EXPERIMENTAL_API
+	  , _symbol(std::make_shared<BitMatrix>(std::move(detectorResult).bits()))
+#endif
 {
 	if (decodeResult.versionNumber())
 		snprintf(_version, 4, "%d", decodeResult.versionNumber());
@@ -41,6 +54,10 @@ Result::Result(DecoderResult&& decodeResult, Position&& position, BarcodeFormat 
 
 	// TODO: add type opaque and code specific 'extra data'? (see DecoderResult::extra())
 }
+
+Result::Result(DecoderResult&& decodeResult, Position&& position, BarcodeFormat format)
+	: Result(std::move(decodeResult), {{}, std::move(position)}, format)
+{}
 
 bool Result::isValid() const
 {
@@ -121,6 +138,24 @@ Result& Result::setReaderOptions(const ReaderOptions& opts)
 	return *this;
 }
 
+#ifdef ZXING_BUILD_EXPERIMENTAL_API
+void Result::symbol(BitMatrix&& bits)
+{
+	bits.flipAll();
+	_symbol = std::make_shared<BitMatrix>(std::move(bits));
+}
+
+ImageView Result::symbol() const
+{
+	return {_symbol->row(0).begin(), _symbol->width(), _symbol->height(), ImageFormat::Lum};
+}
+
+void Result::zint(std::unique_ptr<zint_symbol>&& z)
+{
+	_zint = std::shared_ptr(std::move(z));
+}
+#endif
+
 bool Result::operator==(const Result& o) const
 {
 	// handle case where both are MatrixCodes first
@@ -158,45 +193,45 @@ bool Result::operator==(const Result& o) const
 	return std::min(dTop, dBot) < length / 2 && dLength < length / 5;
 }
 
-Result MergeStructuredAppendSequence(const Results& results)
+Barcode MergeStructuredAppendSequence(const Barcodes& barcodes)
 {
-	if (results.empty())
+	if (barcodes.empty())
 		return {};
 
-	std::list<Result> allResults(results.begin(), results.end());
-	allResults.sort([](const Result& r1, const Result& r2) { return r1.sequenceIndex() < r2.sequenceIndex(); });
+	std::list<Barcode> allBarcodes(barcodes.begin(), barcodes.end());
+	allBarcodes.sort([](const Barcode& r1, const Barcode& r2) { return r1.sequenceIndex() < r2.sequenceIndex(); });
 
-	Result res = allResults.front();
-	for (auto i = std::next(allResults.begin()); i != allResults.end(); ++i)
+	Barcode res = allBarcodes.front();
+	for (auto i = std::next(allBarcodes.begin()); i != allBarcodes.end(); ++i)
 		res._content.append(i->_content);
 
 	res._position = {};
 	res._sai.index = -1;
 
-	if (allResults.back().sequenceSize() != Size(allResults) ||
-		!std::all_of(allResults.begin(), allResults.end(),
-					 [&](Result& it) { return it.sequenceId() == allResults.front().sequenceId(); }))
+	if (allBarcodes.back().sequenceSize() != Size(allBarcodes) ||
+		!std::all_of(allBarcodes.begin(), allBarcodes.end(),
+					 [&](Barcode& it) { return it.sequenceId() == allBarcodes.front().sequenceId(); }))
 		res._error = FormatError("sequenceIDs not matching during structured append sequence merging");
 
 	return res;
 }
 
-Results MergeStructuredAppendSequences(const Results& results)
+Barcodes MergeStructuredAppendSequences(const Barcodes& barcodes)
 {
-	std::map<std::string, Results> sas;
-	for (auto& res : results) {
-		if (res.isPartOfSequence())
-			sas[res.sequenceId()].push_back(res);
+	std::map<std::string, Barcodes> sas;
+	for (auto& barcode : barcodes) {
+		if (barcode.isPartOfSequence())
+			sas[barcode.sequenceId()].push_back(barcode);
 	}
 
-	Results saiResults;
+	Barcodes res;
 	for (auto& [id, seq] : sas) {
-		auto res = MergeStructuredAppendSequence(seq);
-		if (res.isValid())
-			saiResults.push_back(std::move(res));
+		auto barcode = MergeStructuredAppendSequence(seq);
+		if (barcode.isValid())
+			res.push_back(std::move(barcode));
 	}
 
-	return saiResults;
+	return res;
 }
 
-} // ZXing
+} // namespace ZXing

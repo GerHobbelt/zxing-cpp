@@ -80,10 +80,10 @@ public:
 		  _tryInvert(1),
 		  _tryDownscale(1),
 		  _isPure(0),
-		  _tryCode39ExtendedMode(0),
+		  _tryCode39ExtendedMode(1),
 		  _validateCode39CheckSum(0),
 		  _validateITFCheckSum(0),
-		  _returnCodabarStartEnd(0),
+		  _returnCodabarStartEnd(1),
 		  _returnErrors(0),
 		  _downscaleFactor(3),
 		  _eanAddOnSymbol(EanAddOnSymbol::Ignore),
@@ -97,7 +97,7 @@ public:
 	{}
 
 #define ZX_PROPERTY(TYPE, GETTER, SETTER, ...) \
-	__VA_ARGS__ TYPE GETTER() const noexcept { return _##GETTER; } \
+	TYPE GETTER() const noexcept { return _##GETTER; } \
 	__VA_ARGS__ ReaderOptions& SETTER(TYPE v)& { return (void)(_##GETTER = std::move(v)), *this; } \
 	__VA_ARGS__ ReaderOptions&& SETTER(TYPE v)&& { return (void)(_##GETTER = std::move(v)), std::move(*this); }
 
@@ -141,8 +141,8 @@ public:
 	/// The maximum number of symbols (barcodes) to detect / look for in the image with ReadBarcodes
 	ZX_PROPERTY(uint8_t, maxNumberOfSymbols, setMaxNumberOfSymbols)
 
-	/// Deprecated / does nothing. The Code39 was decoded from full ASCII iff symbologyIdentifier()[2] >= '4'
-	ZX_PROPERTY(bool, tryCode39ExtendedMode, setTryCode39ExtendedMode, [[deprecated]])
+	/// Enable the heuristic to detect and decode "full ASCII"/extended Code39 symbols
+	ZX_PROPERTY(bool, tryCode39ExtendedMode, setTryCode39ExtendedMode)
 
 	/// Deprecated / does nothing. The Code39 symbol has a valid checksum iff symbologyIdentifier()[2] is an odd digit
 	ZX_PROPERTY(bool, validateCode39CheckSum, setValidateCode39CheckSum, [[deprecated]])
@@ -150,16 +150,16 @@ public:
 	/// Deprecated / does nothing. The ITF symbol has a valid checksum iff symbologyIdentifier()[2] == '1'.
 	ZX_PROPERTY(bool, validateITFCheckSum, setValidateITFCheckSum, [[deprecated]])
 
-	/// If true, return the start and end chars in a Codabar barcode instead of stripping them.
-	ZX_PROPERTY(bool, returnCodabarStartEnd, setReturnCodabarStartEnd)
+	/// Deprecated / does nothing. Codabar start/stop characters are always returned.
+	ZX_PROPERTY(bool, returnCodabarStartEnd, setReturnCodabarStartEnd, [[deprecated]])
 
-	/// If true, return the barcodes with errors as well (e.g. checksum errors, see @Result::error())
+	/// If true, return the barcodes with errors as well (e.g. checksum errors, see @Barcode::error())
 	ZX_PROPERTY(bool, returnErrors, setReturnErrors)
 
 	/// Specify whether to ignore, read or require EAN-2/5 add-on symbols while scanning EAN/UPC codes
 	ZX_PROPERTY(EanAddOnSymbol, eanAddOnSymbol, setEanAddOnSymbol)
 
-	/// Specifies the TextMode that controls the return of the Result::text() function
+	/// Specifies the TextMode that controls the return of the Barcode::text() function
 	ZX_PROPERTY(TextMode, textMode, setTextMode)
 
 	/// Specifies fallback character set to use instead of auto-detecting it (when applicable)

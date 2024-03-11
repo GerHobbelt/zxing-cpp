@@ -11,7 +11,7 @@
 #include "Utf.h"
 #include "ZXAlgorithms.h"
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <fmt/ostream.h>
 
 #include <chrono>

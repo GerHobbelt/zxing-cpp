@@ -104,6 +104,8 @@ set (COMMON_FILES
     src/Content.cpp
     src/ECI.h
     src/ECI.cpp
+    src/Error.h
+    src/Error.cpp
     src/Flags.h
     src/GTIN.h
     src/GTIN.cpp
@@ -148,8 +150,6 @@ if (ZXING_READERS)
         $<$<BOOL:${BUILD_SHARED_LIBS}>:src/DecodeHints.cpp> # [[deprecated]]
         src/DecoderResult.h
         src/DetectorResult.h
-        src/Error.h
-        src/Error.cpp
         src/GlobalHistogramBinarizer.h
         src/GlobalHistogramBinarizer.cpp
         src/GridSampler.h
@@ -607,8 +607,6 @@ install (
     PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ZXing"
 )
 
-set(ZXING_HAS_READERS ${ZXING_READERS})
-set(ZXING_HAS_WRITERS ${ZXING_WRITERS})
 configure_file (Version.h.in Version.h)
 
 install (

@@ -201,8 +201,9 @@ zint_symbol* CreatorOptions::zint() const
 	auto& zint = d->zint;
 
 	if (!zint) {
+#ifdef PRINT_DEBUG
 		printf("zint version: %d, sizeof(zint_symbol): %ld\n", ZBarcode_Version(), sizeof(zint_symbol));
-
+#endif
 		zint.reset(ZBarcode_Create());
 
 		auto i = FindIf(barcodeFormatZXing2Zint, [zxing = format()](auto& v) { return v.zxing == zxing; });
@@ -235,7 +236,9 @@ Barcode CreateBarcode(const void* data, int size, int mode, const CreatorOptions
 
 	CHECK(ZBarcode_Encode_and_Buffer(zint, (uint8_t*)data, size, 0));
 
-	printf("symbol size: %dx%d\n", zint->width, zint->rows);
+#ifdef PRINT_DEBUG
+	printf("create symbol with size: %dx%d\n", zint->width, zint->rows);
+#endif
 
 	auto buffer = std::vector<uint8_t>(zint->bitmap_width * zint->bitmap_height);
 	std::transform(zint->bitmap, zint->bitmap + zint->bitmap_width * zint->bitmap_height, buffer.data(),
@@ -283,7 +286,7 @@ struct SetCommonWriterOptions
 		zint->output_options |= opts.withQuietZones() ? BARCODE_QUIET_ZONES : BARCODE_NO_QUIET_ZONES;
 
 		if (opts.scale())
-			zint->scale = opts.scale();
+			zint->scale = opts.scale() / 2.f;
 		else if (opts.sizeHint()) {
 			int size = std::max(zint->width, zint->rows);
 			zint->scale = std::max(1, int(float(opts.sizeHint()) / size)) / 2.f;
@@ -319,7 +322,9 @@ Image WriteBarcodeToImage(const Barcode& barcode, const WriterOptions& opts)
 
 	CHECK(ZBarcode_Buffer(zint, opts.rotate()));
 
-	printf("symbol size: %dx%d\n", zint->bitmap_width, zint->bitmap_height);
+#ifdef PRINT_DEBUG
+	printf("write symbol with size: %dx%d\n", zint->bitmap_width, zint->bitmap_height);
+#endif
 	auto iv = Image(zint->bitmap_width, zint->bitmap_height);
 	auto* src = zint->bitmap;
 	auto* dst = const_cast<uint8_t*>(iv.data());

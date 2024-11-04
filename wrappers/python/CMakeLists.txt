@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.18)
 project(ZXingPython)
 
 # check if we are called from the top-level ZXing project
@@ -33,6 +33,7 @@ if (NOT hasParent)
 endif()
 
 find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED) # see https://github.com/pybind/pybind11/issues/4785
+set(PYBIND11_FINDPYTHON ON) # see https://github.com/pybind/pybind11/issues/4785
 zxing_add_package(pybind11 pybind11 https://github.com/pybind/pybind11.git v2.13.6)
 
 # build the python module
@@ -44,9 +45,17 @@ if (ZXING_READERS AND ZXING_WRITERS)
     set_property(TEST PythonTest PROPERTY ENVIRONMENT PYTHONPATH=$<TARGET_FILE_DIR:zxingcpp>)
 endif()
 
+if (NOT DEFINED ZXING_PYTHON_INSTALL_BINDIR)
+    set(ZXING_PYTHON_INSTALL_BINDIR "${CMAKE_INSTALL_BINDIR}")
+endif()
+
+if (NOT DEFINED ZXING_PYTHON_INSTALL_LIBDIR)
+    set(ZXING_PYTHON_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}")
+endif()
+
 install(TARGETS zxingcpp
     COMPONENT python
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+    RUNTIME DESTINATION "${ZXING_PYTHON_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${ZXING_PYTHON_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${ZXING_PYTHON_INSTALL_LIBDIR}")
 

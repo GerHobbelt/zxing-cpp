@@ -177,6 +177,15 @@ namespace ZXing::DataMatrix {
 * Calculates the position of the white top right module using the output of the rectangle detector
 * for a square matrix
 */
+    static void ExtendSide(const BitMatrix& image, const ResultPoint& bottomLeft, ResultPoint& bottomRight,
+                                       const ResultPoint& topLeft, ResultPoint& topRight, int dimension)
+    {
+        PointF DirTop = (topRight - topLeft) / dimension;
+        PointF DirBottom = (bottomRight - bottomLeft) / dimension;
+        topRight += DirTop;
+        bottomRight += DirBottom;
+    }
+
     static ResultPoint CorrectTopRight(const BitMatrix& image, const ResultPoint& bottomLeft, const ResultPoint& bottomRight,
                                        const ResultPoint& topLeft, const ResultPoint& topRight, int dimension)
     {
@@ -426,7 +435,7 @@ namespace ZXing::DataMatrix {
         return SampleGrid(image, *topLeft, *bottomLeft, *bottomRight, correctedTopRight, dimensionTop, dimensionRight);
     }
 
-    static DetectorResult DetectOldWithOffsets(const BitMatrix& image, DecoderResult& outDecoderResult)
+    static DetectorResult DetectOldWithOffsets(const BitMatrix& image, DecoderResult& outDecoderResult, bool& correctedOffset)
     {
         ResultPoint pointA, pointB, pointC, pointD;
         if (!DetectWhiteRect(image, pointA, pointB, pointC, pointD))
@@ -548,6 +557,8 @@ namespace ZXing::DataMatrix {
 
             dimensionTop = dimensionRight = dimension;
 
+            correctedOffset = true;
+
             res = SampleGrid(image, *topLeft, *bottomLeft, *bottomRight + DirBottomLR, *topRight + DirTopLR, dimensionTop, dimensionRight);
             if(outDecoderResult = Decode(res.bits()); outDecoderResult.isValid()) return res;
 
@@ -565,7 +576,7 @@ namespace ZXing::DataMatrix {
 
             res = SampleGrid(image, *topLeft, *bottomLeft - DirLeftBT, *bottomRight - DirRightBT, correctedTopRight, dimensionTop, dimensionRight);
             if(outDecoderResult = Decode(res.bits()); outDecoderResult.isValid()) return res;
-
+            correctedOffset = false;
             res = SampleGrid(image, *topLeft, *bottomLeft, *bottomRight, correctedTopRight, dimensionTop, dimensionRight);
             outDecoderResult = Decode(res.bits());
             return res;
@@ -1362,7 +1373,7 @@ std::array rotateMediun = {
     PointF(cos(M_PI / 3), sin(M_PI / 3))
 };
 
-    static DetectorResult DetectCRPT(const BitMatrix& image, DecoderResult& outDecodeResult, Warp* warp = nullptr, bool needToTraceWarp = false, bool correctCorners = false)
+    static DetectorResult DetectCRPT(const BitMatrix& image, DecoderResult& outDecodeResult, ResultedDefect& possibleResultedDefect, Warp* warp = nullptr, bool needToTraceWarp = false, bool correctCorners = false)
     {
 
         /*ResultPoint p1(0, 0);
@@ -1395,6 +1406,10 @@ std::array rotateMediun = {
 
         DetectorResult res;
         int n1, n2;
+
+        if(transitions[0].transitions > 4) {
+            possibleResultedDefect = ResultedDefect::LMarker;
+        }
 
         //���������� L �� ���� ��������� �� image � ������� DetectNew ��� ������� (��� � ������ L ���� ����������� � ���� �����)
         BitMatrix img2;
@@ -1520,8 +1535,9 @@ std::array rotateMediun = {
         DecoderResult outDecoderResult;
         //if (!result.isValid() && tryHarder)
         //	result = DetectPure(image);
+        ResultedDefect _;
         if (!result.isValid() && tryHarder)
-            result = DetectCRPT(image, outDecoderResult);
+            result = DetectCRPT(image, outDecoderResult, _);
         return result;
 
 #endif
@@ -1574,17 +1590,22 @@ DetectorResults DetectSamplegridV1(const BitMatrix& image, bool tryHarder, bool 
             }
         };
 
-		//OLD DETECTORS
-        detRes = DetectOldWithOffsets(image, outDecoderResult);
+		// OLD DETECTORS
+        bool correctedOffset = false;
+        detRes = DetectOldWithOffsets(image, outDecoderResult, correctedOffset);
         SetResultCandidate();
+        detRes.setResultedDefect(correctedOffset ? ResultedDefect::MissingSync : ResultedDefect::Default);
         if(outDecoderResult.isValid()) return detRes;
 
-        detRes = DetectCRPT(image.copy(), outDecoderResult);
+        ResultedDefect possibleResultedDefect = ResultedDefect::Default;
+        detRes = DetectCRPT(image.copy(), outDecoderResult, possibleResultedDefect);
         SetResultCandidate();
+        detRes.setResultedDefect(possibleResultedDefect);
         if(outDecoderResult.isValid()) return detRes;
 
         detRes = DetectNew(image, tryHarder, tryRotate);
         SetResultCandidate();
+        detRes.setResultedDefect(ResultedDefect::Default);
 		if (detRes.isValid()) {
 			outDecoderResult = Decode(detRes.bits());
 			if(outDecoderResult.isValid()) {
@@ -1601,15 +1622,17 @@ DetectorResults DetectSamplegridV1(const BitMatrix& image, bool tryHarder, bool 
         SetResultCandidate();
 		if (detRes.isValid()) {
 			outDecoderResult = Decode(detRes.bits());
+            detRes.setResultedDefect(ResultedDefect::PrintShift);
 			if(outDecoderResult.isValid()) {
 				return detRes;
 			}
 		}
 
-		detRes = DetectCRPT(image.copy(), outDecoderResult, &warp, true);
+		detRes = DetectCRPT(image.copy(), outDecoderResult, possibleResultedDefect, &warp, true);
         SetResultCandidate();
         if(outDecoderResult.isValid()) return detRes;
 		if (detRes.isValid()) {
+            detRes.setResultedDefect(ResultedDefect::PrintShift);
 			outDecoderResult = Decode(detRes.bits());
 			if(outDecoderResult.isValid()) {
 				return detRes;
@@ -1628,8 +1651,9 @@ DetectorResults DetectDefined(const BitMatrix& image, const PointF& P0, const Po
 
 	//OLD DETECTORS
 	detRes = DetectNew(image, tryHarder, tryRotate);
+    ResultedDefect possibleResultedDefect;
 	if (!detRes.isValid())
-		detRes = DetectCRPT(image.copy(), outDecoderResult);
+		detRes = DetectCRPT(image.copy(), outDecoderResult,possibleResultedDefect);
 
 	if (detRes.isValid()) {
 		outDecoderResult = Decode(detRes.bits());
@@ -1650,7 +1674,7 @@ DetectorResults DetectDefined(const BitMatrix& image, const PointF& P0, const Po
 			return detRes;
 		}
 	}
-	detRes = DetectCRPT(image.copy(), outDecoderResult, &warp, true);
+	detRes = DetectCRPT(image.copy(), outDecoderResult, possibleResultedDefect, &warp, true);
 
 	if (detRes.isValid()) {
 		outDecoderResult = Decode(detRes.bits());

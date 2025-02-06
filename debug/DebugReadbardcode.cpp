@@ -260,6 +260,22 @@ int main(int argc, char *argv[])
 				std::cout << "Zxing results size: " << zxing_results_ptr->size() << std::endl;
 				std::cout << "Processed " << std::endl;
 				for (const auto& result : *zxing_results_ptr) {
+					switch (result.resultedDefect())
+					{
+					case ZXing::ResultedDefect::Default:
+						break;
+					case ZXing::ResultedDefect::LMarker:
+						std::cout << "LMarker defect found" << std::endl;
+						break;
+					case ZXing::ResultedDefect::MissingSync:
+						std::cout << "Missing synchronization defect found" << std::endl;
+						break;
+					case ZXing::ResultedDefect::PrintShift:
+						std::cout << "Print shift defect found" << std::endl;
+						break;
+					default:
+						break;
+					}
 					std::cout << "Barcode text: " << result.text() << std::endl;
 				break;
 			}

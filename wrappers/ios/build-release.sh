@@ -1,6 +1,6 @@
 echo ========= Remove previous builds
 rm -rf _builds
-rm -rf ZXingCpp.xcframework
+rm -rf ZXing.xcframework
 
 echo ========= Create project structure
 cmake -S../../ -B_builds -GXcode \

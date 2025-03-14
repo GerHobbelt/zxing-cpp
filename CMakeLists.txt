@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 3.15)
 
 project(ZXing)
 
+## Add these lines
+#set(OpenCV_STATIC OFF)
+#set(BUILD_SHARED_LIBS ON)
+#find_package(OpenCV 3.4 REQUIRED)
+#if(OpenCV_FOUND)
+#    message(STATUS "OpenCV library status:")
+#    message(STATUS "    version: ${OpenCV_VERSION}")
+#    message(STATUS "    libraries: ${OpenCV_LIBS}")
+#    message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
+#endif()
+
+
+
 option (BUILD_WRITERS "Build with writer support (encoders)" ON)
 option (BUILD_READERS "Build with reader support (decoders)" ON)
 option (BUILD_EXAMPLES "Build the example barcode reader/writer applications" ON)

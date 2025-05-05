@@ -18,7 +18,6 @@
 
 #ifdef ZXING_USE_ZINT
 
-#include "oned/ODUPCEANCommon.h"
 #include "DecoderResult.h"
 #include "DetectorResult.h"
 #include <zint.h>
@@ -54,28 +53,28 @@ struct CreatorOptions::Data
 	CreatorOptions& CreatorOptions::NAME(TYPE v)& { return d->NAME = std::move(v), *this; } \
 	CreatorOptions&& CreatorOptions::NAME(TYPE v)&& { return d->NAME = std::move(v), std::move(*this); }
 
-	ZX_PROPERTY(BarcodeFormat, format)
-	ZX_PROPERTY(bool, readerInit)
-	ZX_PROPERTY(bool, forceSquareDataMatrix)
-	ZX_PROPERTY(std::string, ecLevel)
-	ZX_PROPERTY(std::string, options)
+ZX_PROPERTY(BarcodeFormat, format)
+ZX_PROPERTY(bool, readerInit)
+ZX_PROPERTY(bool, forceSquareDataMatrix)
+ZX_PROPERTY(std::string, ecLevel)
+ZX_PROPERTY(std::string, options)
 
 #undef ZX_PROPERTY
 
 #define ZX_RO_PROPERTY(TYPE, NAME) \
 	TYPE CreatorOptions::NAME() const noexcept { return JsonGet<TYPE>(d->options, #NAME); }
 
-	ZX_RO_PROPERTY(bool, gs1);
-	ZX_RO_PROPERTY(bool, stacked);
-	ZX_RO_PROPERTY(std::string_view, version);
-	ZX_RO_PROPERTY(std::string_view, dataMask);
+ZX_RO_PROPERTY(bool, gs1);
+ZX_RO_PROPERTY(bool, stacked);
+ZX_RO_PROPERTY(std::string_view, version);
+ZX_RO_PROPERTY(std::string_view, dataMask);
 
-#undef ZX_PROPERTY
+#undef ZX_RO_PROPERTY
 
-	CreatorOptions::CreatorOptions(BarcodeFormat format, std::string options) : d(std::make_unique<Data>(format, std::move(options))) {}
-	CreatorOptions::~CreatorOptions() = default;
-	CreatorOptions::CreatorOptions(CreatorOptions&&) = default;
-	CreatorOptions& CreatorOptions::operator=(CreatorOptions&&) = default;
+CreatorOptions::CreatorOptions(BarcodeFormat format, std::string options) : d(std::make_unique<Data>(format, std::move(options))) {}
+CreatorOptions::~CreatorOptions() = default;
+CreatorOptions::CreatorOptions(CreatorOptions&&) = default;
+CreatorOptions& CreatorOptions::operator=(CreatorOptions&&) = default;
 
 struct WriterOptions::Data
 {
@@ -276,7 +275,7 @@ static SymbologyIdentifier SymbologyIdentifierZint2ZXing(const CreatorOptions& o
 	SymbologyIdentifier ret = i->si;
 
 	if ((BarcodeFormat::EAN13 | BarcodeFormat::UPCA | BarcodeFormat::UPCE).testFlag(format)) {
-		if (Contains(ba.asString().data(), ' ')) // Have EAN-2/5 add-on?
+		if (ba.size() > 13) // Have EAN-2/5 add-on?
 			ret.modifier = '3'; // Combined packet, EAN-13, UPC-A, UPC-E, with add-on
 	} else if (format == BarcodeFormat::Code39) {
 		if (FindIf(ba, iscntrl) != ba.end()) // Extended Code 39?
@@ -428,10 +427,6 @@ Barcode CreateBarcode(const void* data, int size, int mode, const CreatorOptions
 			content.switchEncoding(CharacterSet::ISO8859_1); // set this as default to prevent guessing without setting "hasECI"
 		content.append({raw_seg.source, static_cast<size_t>(raw_seg.length - (opts.format() == BarcodeFormat::Code93 ? 2 : 0))});
 	}
-	if (opts.format() == BarcodeFormat::UPCE)
-		content.bytes = ByteArray("0" + OneD::UPCEANCommon::ConvertUPCEtoUPCA(std::string(content.bytes.asString())));
-	else if (opts.format() == BarcodeFormat::UPCA)
-		content.bytes = ByteArray("0" + std::string(content.bytes.asString()));
 #else
 	if (zint->text_length) {
 		content.switchEncoding(ECI::UTF8);

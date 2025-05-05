@@ -222,6 +222,7 @@ set (PUBLIC_HEADERS
     src/ImageView.h
     src/Point.h
     src/Quadrilateral.h
+    src/Range.h # re-evaluate for 3.0
     src/ReadBarcode.h
     src/ReaderOptions.h
     src/StructuredAppend.h
@@ -242,7 +243,6 @@ if (ZXING_WRITERS_OLD)
     set (PUBLIC_HEADERS ${PUBLIC_HEADERS}
         src/BitMatrix.h
         src/BitMatrixIO.h
-        src/Range.h
         src/Matrix.h
         src/MultiFormatWriter.h
     )
@@ -404,9 +404,9 @@ if (ZXING_READERS)
         src/pdf417/PDFCodeword.h
         src/pdf417/PDFCodewordDecoder.h
         src/pdf417/PDFCodewordDecoder.cpp
+        src/pdf417/PDFCustomData.h
         src/pdf417/PDFDecoder.h
         src/pdf417/PDFDecoder.cpp
-        src/pdf417/PDFDecoderResultExtra.h
         src/pdf417/PDFDetectionResult.h
         src/pdf417/PDFDetectionResult.cpp
         src/pdf417/PDFDetectionResultColumn.h
@@ -421,7 +421,6 @@ if (ZXING_READERS)
         src/pdf417/PDFReader.cpp
         src/pdf417/PDFScanningDecoder.h
         src/pdf417/PDFScanningDecoder.cpp
-        src/pdf417/CustomData.h
         src/pdf417/ZXNullable.h
     )
 endif()

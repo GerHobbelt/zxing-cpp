@@ -1,18 +1,13 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(ZXing)
+# Add these lines before find_package(OpenCV)
+set(OpenCV_DIR "/usr/local/lib/cmake/opencv3")  # Likely location of OpenCV 3.4 config
+set(OpenCV_FIND_VERSION "3.4")
+set(OpenCV_SHARED ON)  # Force using shared libraries (.so) instead of static (.a)
 
-## Add these lines
-set(OpenCV_STATIC OFF)
-set(BUILD_SHARED_LIBS ON)
+# Then use find_package as normal
 find_package(OpenCV 3.4 REQUIRED)
-if(OpenCV_FOUND)
-    message(STATUS "OpenCV library status:")
-    message(STATUS "    version: ${OpenCV_VERSION}")
-    message(STATUS "    libraries: ${OpenCV_LIBS}")
-    message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
-endif()
-
 
 
 option (BUILD_WRITERS "Build with writer support (encoders)" ON)
@@ -96,4 +91,9 @@ endif()
 if(BUILD_FOR_AARM)
     find_library(log-lib log)
     target_link_libraries(ZXing INTERFACE ${log-lib})
+
+    # Add 16KB page size support for Android builds
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 endif()

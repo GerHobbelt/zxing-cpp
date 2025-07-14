@@ -36,6 +36,8 @@
 #include <utility>
 #include <vector>
 #include <iostream>
+#include "opencv2/opencv.hpp"
+#include <opencv2/core/hal/intrin.hpp>
 
 #undef min
 #undef max
@@ -178,7 +180,7 @@ namespace ZXing::DataMatrix {
 * for a square matrix
 */
     static void ExtendSide(const BitMatrix& image, const ResultPoint& bottomLeft, ResultPoint& bottomRight,
-                                       const ResultPoint& topLeft, ResultPoint& topRight, int dimension)
+                           const ResultPoint& topLeft, ResultPoint& topRight, int dimension)
     {
         PointF DirTop = (topRight - topLeft) / dimension;
         PointF DirBottom = (bottomRight - bottomLeft) / dimension;
@@ -750,46 +752,46 @@ namespace ZXing::DataMatrix {
             return true;
         }
 
-	bool updateDirectionFromLine(RegressionLine& line)
-	{
-		return line.evaluate(1.5) && updateDirectionFromOrigin(p - line.project(p) + line.points().front());
-	}
+        bool updateDirectionFromLine(RegressionLine& line)
+        {
+            return line.evaluate(1.5) && updateDirectionFromOrigin(p - line.project(p) + line.points().front());
+        }
 
-	bool updateDirectionFromLineCentroid(RegressionLine& line)
-	{
-		// Basically a faster, less accurate version of the above without the line evaluation
-		return updateDirectionFromOrigin(line.centroid());
-	}
+        bool updateDirectionFromLineCentroid(RegressionLine& line)
+        {
+            // Basically a faster, less accurate version of the above without the line evaluation
+            return updateDirectionFromOrigin(line.centroid());
+        }
 
-	bool traceLine(PointF dEdge, RegressionLine& line)
-	{
-		line.setDirectionInward(dEdge);
-		do {
-			log(p);
-			line.add(p);
-			if (line.points().size() % 50 == 10) {
-				if (!line.evaluate())
-					return false;
-				if (!updateDirectionFromOrigin(p - line.project(p) + line.points().front()))
-					return false;
-			}
-			auto stepResult = traceStep(dEdge, 1, line.isValid());
-			if (stepResult != StepResult::FOUND)
-				return stepResult == StepResult::OPEN_END && line.points().size() > 1;
-		} while (true);
-	}
+        bool traceLine(PointF dEdge, RegressionLine& line)
+        {
+            line.setDirectionInward(dEdge);
+            do {
+                log(p);
+                line.add(p);
+                if (line.points().size() % 50 == 10) {
+                    if (!line.evaluate())
+                        return false;
+                    if (!updateDirectionFromOrigin(p - line.project(p) + line.points().front()))
+                        return false;
+                }
+                auto stepResult = traceStep(dEdge, 1, line.isValid());
+                if (stepResult != StepResult::FOUND)
+                    return stepResult == StepResult::OPEN_END && line.points().size() > 1;
+            } while (true);
+        }
 
-    bool traceGaps(PointF dEdge, RegressionLine& line, int maxStepSize, const RegressionLine& finishLine = {}, double minDist = 0)
-    {
-        line.setDirectionInward(dEdge);
-        int gaps = 0, steps = 0, maxStepsPerGap = maxStepSize;
-        PointF lastP;
-        do {
-            // detect an endless loop (lack of progress). if encountered, please report.
-            // this fixes a deadlock in falsepositives-1/#570.png and the regression in #574
-            if (p == std::exchange(lastP, p) || steps++ > (gaps == 0 ? 2 : gaps + 1) * maxStepsPerGap)
-                return false;
-            log(p);
+        bool traceGaps(PointF dEdge, RegressionLine& line, int maxStepSize, const RegressionLine& finishLine = {}, double minDist = 0)
+        {
+            line.setDirectionInward(dEdge);
+            int gaps = 0, steps = 0, maxStepsPerGap = maxStepSize;
+            PointF lastP;
+            do {
+                // detect an endless loop (lack of progress). if encountered, please report.
+                // this fixes a deadlock in falsepositives-1/#570.png and the regression in #574
+                if (p == std::exchange(lastP, p) || steps++ > (gaps == 0 ? 2 : gaps + 1) * maxStepsPerGap)
+                    return false;
+                log(p);
 
                 // if we drifted too far outside of the code, break
                 if (line.isValid() && line.signedDistance(p) < -5 && (!line.evaluate() || line.signedDistance(p) < -5))
@@ -808,40 +810,40 @@ namespace ZXing::DataMatrix {
                     if (!line.evaluate(1.5))
                         return false;
 
-                auto np = line.project(p);
-                // make sure we are making progress even when back-projecting:
-                // consider a 90deg corner, rotated 45deg. we step away perpendicular from the line and get
-                // back projected where we left off the line.
-                // The 'while' instead of 'if' was introduced to fix the issue with #245. It turns out that
-                // np can actually be behind the projection of the last line point and we need 2 steps in d
-                // to prevent a dead lock. see #245.png
-                while (distance(np, line.project(line.points().back())) < 1)
-                    np = np + d;
-                p = centered(np);
-            }
-            else {
-                auto curStep = line.points().empty() ? PointF() : p - line.points().back();
-                auto stepLengthInMainDir = line.points().empty() ? 0.0 : dot(mainDirection(d), curStep);
-                line.add(p);
-
-                if (stepLengthInMainDir > 1 || maxAbsComponent(curStep) >= 2) {
-                    ++gaps;
-                    if (gaps >= 2 || line.points().size() > 5) {
-                        if (!updateDirectionFromLine(line))
-                            return false;
-                        // check if the first half of the top-line trace is complete.
-                        // the minimum code size is 10x10 -> every code has at least 4 gaps
-                        if (minDist && gaps >= 4 && distance(p, line.points().front()) > minDist) {
-                            // undo the last insert, it will be inserted again after the restart
-                            line.pop_back();
-                            --gaps;
-                            return true;
-                        }
-                    }
-                } else if (gaps == 0 && Size(line.points()) >= 2 * maxStepSize) {
-                    return false; // no point in following a line that has no gaps
+                    auto np = line.project(p);
+                    // make sure we are making progress even when back-projecting:
+                    // consider a 90deg corner, rotated 45deg. we step away perpendicular from the line and get
+                    // back projected where we left off the line.
+                    // The 'while' instead of 'if' was introduced to fix the issue with #245. It turns out that
+                    // np can actually be behind the projection of the last line point and we need 2 steps in d
+                    // to prevent a dead lock. see #245.png
+                    while (distance(np, line.project(line.points().back())) < 1)
+                        np = np + d;
+                    p = centered(np);
                 }
-            }
+                else {
+                    auto curStep = line.points().empty() ? PointF() : p - line.points().back();
+                    auto stepLengthInMainDir = line.points().empty() ? 0.0 : dot(mainDirection(d), curStep);
+                    line.add(p);
+
+                    if (stepLengthInMainDir > 1 || maxAbsComponent(curStep) >= 2) {
+                        ++gaps;
+                        if (gaps >= 2 || line.points().size() > 5) {
+                            if (!updateDirectionFromLine(line))
+                                return false;
+                            // check if the first half of the top-line trace is complete.
+                            // the minimum code size is 10x10 -> every code has at least 4 gaps
+                            if (minDist && gaps >= 4 && distance(p, line.points().front()) > minDist) {
+                                // undo the last insert, it will be inserted again after the restart
+                                line.pop_back();
+                                --gaps;
+                                return true;
+                            }
+                        }
+                    } else if (gaps == 0 && Size(line.points()) >= 2 * maxStepSize) {
+                        return false; // no point in following a line that has no gaps
+                    }
+                }
 
                 if (finishLine.isValid())
                     UpdateMin(maxStepSize, static_cast<int>(finishLine.signedDistance(p)));
@@ -1016,22 +1018,22 @@ namespace ZXing::DataMatrix {
             };
 
             DetectorResult res;
-			if(tryToTraceWarp && warp) {
-				if(!warp->isValid() || warp->xOffsets.size() > dimT || warp->yOffsets.size() > dimR) {
-					*warp = ComputeWarp(*startTracer.img, tl, bl, br, tr, 5, 5, dimT);
-				}
-				// warp->Resample(dimT, dimR);
-			}
-        	if(warp) {
-				if(warp->xOffsets.size() != dimT || warp->yOffsets.size() != dimR) {
-					warp->Resample(dimT, dimR);
-				}
+            if(tryToTraceWarp && warp) {
+                if(!warp->isValid() || warp->xOffsets.size() > dimT || warp->yOffsets.size() > dimR) {
+                    *warp = ComputeWarp(*startTracer.img, tl, bl, br, tr, 5, 5, dimT);
+                }
+                // warp->Resample(dimT, dimR);
+            }
+            if(warp) {
+                if(warp->xOffsets.size() != dimT || warp->yOffsets.size() != dimR) {
+                    warp->Resample(dimT, dimR);
+                }
                 if(correctCorners) {
                     auto TL = tl, BL = bl, BR = br, TR = tr;
                     CorrectCorners(*startTracer.img, TL, BL, BR, TR, dimT);
                     res = SampleGridWarped(*startTracer.img, TL, BL, BR, TR, dimT, dimR, *warp );
                 } else {
-					res = SampleGridWarped(*startTracer.img, dimT, dimR, *warp, PerspectiveTransform(Rectangle(dimT, dimR, 0), sourcePoints));
+                    res = SampleGridWarped(*startTracer.img, dimT, dimR, *warp, PerspectiveTransform(Rectangle(dimT, dimR, 0), sourcePoints));
                 }
             } else {
                 res = SampleGrid(*startTracer.img, dimT, dimR, PerspectiveTransform(Rectangle(dimT, dimR, 0), sourcePoints));
@@ -1182,6 +1184,93 @@ namespace ZXing::DataMatrix {
 
     }
 
+    void createMaps(cv::Mat& mapXY, int outputSize, bool horizontal, bool inverse) {
+        mapXY.create(outputSize, outputSize, CV_32FC2);
+
+        float factor = float(outputSize) / 7.6;
+
+        static cv::Mat offsetMap;
+
+        if(offsetMap.cols != outputSize) {
+            offsetMap = cv::Mat(1, outputSize, CV_32F);
+
+            constexpr const int vec_size = cv::v_float32::nlanes;
+            constexpr size_t simd_alignment = cv::v_float32::nlanes * sizeof(float);
+            float* mapRow = offsetMap.ptr<float>(0);
+            int i = 0;
+            alignas(simd_alignment) float tmp[vec_size];
+            alignas(simd_alignment) float tmp2[vec_size];
+            for(int k = 0; k < vec_size; k++) {
+                tmp2[k] = k;
+            }
+            cv::v_float32 indexAdd = cv::v_load_aligned(tmp2);
+            float indexMul = 2.0 / float(outputSize - 1);
+
+            for (; i <= outputSize - vec_size; i += vec_size) {
+
+                cv::v_float32 v_val = (cv::v_setall_f32(static_cast<float>(i)) + indexAdd) * cv::v_setall_f32(indexMul);
+
+                v_val = cv::v_abs(v_val - cv::v_setall_f32(1.0));
+                cv::v_store_aligned(tmp, v_val);
+
+                for(int k = 0; k < vec_size; k++) {
+                    tmp[k] = std::cos(tmp[k]);
+                }
+                v_val = cv::v_load_aligned(tmp);
+                v_val = (v_val - cv::v_setall_f32(0.75)) * cv::v_setall_f32(factor);
+                cv::v_store(mapRow + i, v_val);
+            }
+            for (; i < outputSize; ++i) {
+                mapRow[i] = (std::cos(std::fabs(float(i) * indexMul - 1.0)) - 0.75) * factor;
+            }
+        }
+
+        float* offsetRow = offsetMap.ptr<float>(0);
+        float inverseMul = inverse ? -1.0f : 1.0f;
+
+        cv::parallel_for_(cv::Range(0, outputSize), [&mapXY, inverseMul, offsetRow, &outputSize, horizontal, inverse](const cv::Range& range) {
+            for (int y = range.start; y < range.end; y++) {
+                float* row = mapXY.ptr<float>(y);
+                for(int x = 0; x < outputSize; ++x) {
+                    float& dx = row[x * 2];
+                    float& dy = row[x * 2 + 1];
+                    dx = static_cast<float>(x);
+                    dy = static_cast<float>(y);
+                    if(horizontal) {
+                        dx += offsetRow[y] * inverseMul;
+                    } else {
+                        dy += offsetRow[x] * inverseMul;
+                    }
+                }
+            }
+        });
+    }
+
+    void correctBottleCv(const cv::Mat& img, cv::Mat& outImg, bool horizontal, bool inverse, bool small) {
+
+        // img.copyTo(outImg);
+
+        static std::pair<cv::Mat, cv::Mat> mapsXY[8];
+
+        if(outImg.cols <= 0 || outImg.cols != outImg.rows) {
+            throw std::invalid_argument("Output matrix must be a square");
+        }
+        float outputSize = outImg.rows;
+
+        uint8_t mapMask = (inverse ? 1 : 0) | (horizontal ? 0b10 : 0) | (small ? 0b100 : 0);
+
+        auto& mapXY = mapsXY[mapMask];
+
+        if(mapXY.first.empty()) {
+            cv::Mat floatMap;
+            createMaps(floatMap, outputSize, horizontal, inverse);
+            cv::convertMaps(floatMap, {}, mapXY.first, mapXY.second, CV_16SC2, true);
+            // cv::convertMaps(floatMap, {}, mapXY.first, mapXY.second, CV_32FC2, true);
+            // cv::convertMaps(mapXY, {}, mapXY, {}, CV_16SC2);
+        }
+
+        cv::remap(img, outImg, mapXY.first, mapXY.second, cv::INTER_NEAREST, 0, 0);
+    }
 
     void rotate(const BitMatrix& img, BitMatrix& outImg, const PointF& sincos) {
         int  rows, cols,r,c,r1,c1,k,s;
@@ -1243,6 +1332,40 @@ namespace ZXing::DataMatrix {
         }
     }
 
+    void rotateNew(const BitMatrix& img, BitMatrix& outImg, const PointF& xBasisD) {
+
+        auto toFloatP = [](double x, double y) -> PointT<float> {
+            return PointT<float>(static_cast<float>(x), static_cast<float>(y));
+        };
+
+        PointT<float> xBasis(static_cast<float>(xBasisD.x), static_cast<float>(xBasisD.y));
+        PointT<float> yBasis(-xBasis.y, xBasis.x);
+
+        float mul = std::max<float>(std::fabs(xBasis.x + xBasis.y), std::fabs(yBasis.x + yBasis.y));
+
+        PointT<float> inImgSize(static_cast<float>(img.width() - 1), static_cast<float>(img.height() - 1));
+        PointT<float> outImgSize(static_cast<float>(outImg.width() - 1), static_cast<float>(outImg.height() - 1));
+        PointT<float> outImgSizeInv = {1.0f / outImgSize.x, 1.0f / outImgSize.y};
+
+        for(int y = 0; y < outImg.width(); y++) {
+            PointT<float> oldY = (static_cast<float>(y) * outImgSizeInv.y - 0.5f) * yBasis;
+            for(int x = 0; x < outImg.height(); x++) {
+                PointT<float> oldImgF = (float(x) * outImgSizeInv.x - 0.5f) * xBasis + oldY;
+                oldImgF = mul * oldImgF;
+                oldImgF.x += 0.5f;
+                oldImgF.y += 0.5f;
+
+                PointI p = static_cast<PointI>(oldImgF * inImgSize);
+                outImg.set(x, y, IsValidPoint(p, img.width(), img.height()) ? img.get(p) : false);
+            }
+        }
+    }
+
+    void rotateCV45(const BitMatrix& img, BitMatrix& outImg) {
+        auto M = cv::getRotationMatrix2D({float(outImg.width()) * 0.5f, float(outImg.height()) * 0.5f}, 45, 0.70710678118);
+        auto outputMat = outImg.asMat();
+        cv::warpAffine(img.asMat(), outputMat, M, outputMat.size(), cv::INTER_NEAREST, cv::BORDER_CONSTANT, BitMatrix::UNSET_V);
+    }
 
     void rotate45(BitMatrix& img) {
         int  rows, cols,r,c,r1,c1,k,s;
@@ -1361,34 +1484,29 @@ namespace ZXing::DataMatrix {
 
     }
 
+    void line3(cv::Mat& mat, int x1, int y1, int x2, int y2, int thickness = 2) {
+        cv::line(mat, {x1,y1},{x2,y2}, BitMatrix::SET_V, thickness, cv::LINE_4);
+    }
 
+    std::array rotateEasy = {
+            PointF(cos(M_PI / 4), sin(M_PI / 4))
+    };
 
-std::array rotateEasy = {
-    PointF(cos(M_PI / 4), sin(M_PI / 4))
-};
-
-std::array rotateMediun = {
-    PointF(cos(M_PI / 4), sin(M_PI / 4)),
-    PointF(cos(M_PI / 6), sin(M_PI / 6)),
-    PointF(cos(M_PI / 3), sin(M_PI / 3))
-};
+    std::array rotateMediun = {
+            PointF(cos(M_PI / 4), sin(M_PI / 4)),
+            PointF(cos(M_PI / 6), sin(M_PI / 6)),
+            PointF(cos(M_PI / 3), sin(M_PI / 3))
+    };
 
     static DetectorResult DetectCRPT(const BitMatrix& image, DecoderResult& outDecodeResult, ResultedDefect& possibleResultedDefect, Warp* warp = nullptr, bool needToTraceWarp = false, bool correctCorners = false)
     {
-
-        /*ResultPoint p1(0, 0);
-        ResultPoint p2(0, 0);
-        ResultPoint p3(0, 0);
-        ResultPoint p4(0, 0);
-        createBitmapFromBitMatrix(image, p1, p2, p3, p4);*/
-
         BitMatrix newimage = image.copy();
         ResultPoint pointA, pointB, pointC, pointD;
 
-        if(!DetectWhiteRect(newimage, pointA, pointB, pointC, pointD)) {
-            for(const auto& rot : rotateEasy) {
-                rotate(image, newimage, rot);
-                if (DetectWhiteRect(newimage, pointA, pointB, pointC, pointD)) break;
+        if (!DetectWhiteRect(newimage, pointA, pointB, pointC, pointD)) {
+            rotateCV45(image, newimage);
+            if(!DetectWhiteRect(newimage, pointA, pointB, pointC, pointD)) {
+                return {};
             }
         }
 
@@ -1413,28 +1531,40 @@ std::array rotateMediun = {
 
         //���������� L �� ���� ��������� �� image � ������� DetectNew ��� ������� (��� � ������ L ���� ����������� � ���� �����)
         BitMatrix img2;
+
         for (int i = 0; i < 2; i++) {
             if (i == 0) { n1 = 0; n2 = 1; }
             if (i == 1) { n1 = 0; n2 = 2; }
 
-            img2 = newimage.copy();
-            line2(img2, transitions[n1].from->x(), transitions[n1].from->y(), transitions[n1].to->x(), transitions[n1].to->y());
-            line2(img2, transitions[n2].from->x(), transitions[n2].from->y(), transitions[n2].to->x(), transitions[n2].to->y());
+            newimage.copyTo(img2);
+            auto mat = img2.asMat();
+            line3(mat, transitions[n1].from->x(), transitions[n1].from->y(), transitions[n1].to->x(), transitions[n1].to->y());
+            line3(mat, transitions[n2].from->x(), transitions[n2].from->y(), transitions[n2].to->x(), transitions[n2].to->y());
 
             res = DetectNew(img2, true, true, warp, needToTraceWarp, correctCorners);
+
             if (!res.isValid()) continue;
             if (outDecodeResult = Decode(res.bits()); outDecodeResult.isValid()) return res;
-
         } //i
 
 
-        //������������ �������������� �������� �������, 4 ��������: �����������/���������+��������
-        //� ���� ����� ������������ ���3, L1, ������� � �.�, �������� ����������� �� � ��������
-        // BitMatrix img2;
+        const int remapSizeBig = 256;
+        const int remapSizeHalfThreshold = 156;
+        int remapSize = remapSizeBig;
+        if(std::max(image.width(), image.height()) < remapSizeHalfThreshold) {
+            remapSize /= 2;
+        }
+
+        img2 = BitMatrix(remapSize, remapSize);
+        auto img2Mat = img2.asMat();
+
+        cv::Mat resizedImg;
+        cv::resize(image.asMat(), resizedImg, {remapSize, remapSize}, 0,0, cv::INTER_LINEAR);
+
         for (int i = 0; i < 4; i++) {
             n1 = 0; n2 = 1;
 
-            correctBottle(newimage, img2, i & 0b10, i & 0b01);
+            correctBottleCv(resizedImg, img2Mat, i & 0b10, i & 0b01, remapSize != remapSizeBig);
 
             res = DetectNew(img2, true, true, warp, needToTraceWarp, correctCorners);
             if (!res.isValid()) continue;
@@ -1544,11 +1674,11 @@ std::array rotateMediun = {
     }
 
 //    const int CommonMatrixDimensions[] = { 20, 22, 24, 26, 32, 36, 40, 44 };
-DetectorResults DetectSamplegridV1(const BitMatrix& image, bool tryHarder, bool tryRotate, bool isPure, DecoderResult& outDecoderResult)
-{
+    DetectorResults DetectSamplegridV1(const BitMatrix& image, bool tryHarder, bool tryRotate, bool isPure, DecoderResult& outDecoderResult)
+    {
 
-	#ifdef __cpp_impl_coroutine
-		DetectorResult detRes;
+#ifdef __cpp_impl_coroutine
+        DetectorResult detRes;
 		//OLD DETECTORS
 		detRes = DetectNew(image, tryHarder, tryRotate);
 		if (!detRes.isValid())
@@ -1580,9 +1710,9 @@ DetectorResults DetectSamplegridV1(const BitMatrix& image, bool tryHarder, bool 
 		}
 		//OLD DETECTORS WITH MY SAMPLE GRID
 		co_return {};
-	#else
+#else
         QuadrilateralI resultCandidate;
-		DetectorResult detRes;
+        DetectorResult detRes;
 
         auto SetResultCandidate = [&](){
             if(detRes.isValid()) {
@@ -1590,7 +1720,7 @@ DetectorResults DetectSamplegridV1(const BitMatrix& image, bool tryHarder, bool 
             }
         };
 
-		// OLD DETECTORS
+        // OLD DETECTORS
         bool correctedOffset = false;
         detRes = DetectOldWithOffsets(image, outDecoderResult, correctedOffset);
         SetResultCandidate();
@@ -1606,184 +1736,184 @@ DetectorResults DetectSamplegridV1(const BitMatrix& image, bool tryHarder, bool 
         detRes = DetectNew(image, tryHarder, tryRotate);
         SetResultCandidate();
         detRes.setResultedDefect(ResultedDefect::Default);
-		if (detRes.isValid()) {
-			outDecoderResult = Decode(detRes.bits());
-			if(outDecoderResult.isValid()) {
-				return detRes;
-			}
-		}
-		//#OLD DETECTORS
+        if (detRes.isValid()) {
+            outDecoderResult = Decode(detRes.bits());
+            if(outDecoderResult.isValid()) {
+                return detRes;
+            }
+        }
+        //#OLD DETECTORS
 
-		//OLD DETECTORS WITH MY SAMPLE GRID
+        //OLD DETECTORS WITH MY SAMPLE GRID
 
-		Warp warp;
+        Warp warp;
 
-		detRes = DetectNew(image, tryHarder, tryRotate, &warp, true);
+        detRes = DetectNew(image, tryHarder, tryRotate, &warp, true);
         SetResultCandidate();
-		if (detRes.isValid()) {
-			outDecoderResult = Decode(detRes.bits());
+        if (detRes.isValid()) {
+            outDecoderResult = Decode(detRes.bits());
             detRes.setResultedDefect(ResultedDefect::PrintShift);
-			if(outDecoderResult.isValid()) {
-				return detRes;
-			}
-		}
+            if(outDecoderResult.isValid()) {
+                return detRes;
+            }
+        }
 
-		detRes = DetectCRPT(image.copy(), outDecoderResult, possibleResultedDefect, &warp, true);
+        detRes = DetectCRPT(image.copy(), outDecoderResult, possibleResultedDefect, &warp, true);
         SetResultCandidate();
         if(outDecoderResult.isValid()) return detRes;
-		if (detRes.isValid()) {
+        if (detRes.isValid()) {
             detRes.setResultedDefect(ResultedDefect::PrintShift);
-			outDecoderResult = Decode(detRes.bits());
-			if(outDecoderResult.isValid()) {
-				return detRes;
-			}
-		}
-		//#OLD DETECTORS WITH MY SAMPLE GRID
-		return DetectorResults({}, std::move(resultCandidate));
-	#endif
-}
+            outDecoderResult = Decode(detRes.bits());
+            if(outDecoderResult.isValid()) {
+                return detRes;
+            }
+        }
+        //#OLD DETECTORS WITH MY SAMPLE GRID
+        return DetectorResults({}, std::move(resultCandidate));
+#endif
+    }
 
-const int CommonMatrixDimensions[] = { 20, 22, 24, 26, 32, 36, 40, 44 };
+    const int CommonMatrixDimensions[] = { 20, 22, 24, 26, 32, 36, 40, 44 };
 
-DetectorResults DetectDefined(const BitMatrix& image, const PointF& P0, const PointF& P1, const PointF& P2, const PointF& P3, bool tryHarder, bool tryRotate, bool isPure, DecoderResult& outDecoderResult)
-{
-	DetectorResult detRes;
+    DetectorResults DetectDefined(const BitMatrix& image, const PointF& P0, const PointF& P1, const PointF& P2, const PointF& P3, bool tryHarder, bool tryRotate, bool isPure, DecoderResult& outDecoderResult)
+    {
+        DetectorResult detRes;
 
-	//OLD DETECTORS
-	detRes = DetectNew(image, tryHarder, tryRotate);
-    ResultedDefect possibleResultedDefect;
-	if (!detRes.isValid())
-		detRes = DetectCRPT(image.copy(), outDecoderResult,possibleResultedDefect);
+        //OLD DETECTORS
+        detRes = DetectNew(image, tryHarder, tryRotate);
+        ResultedDefect possibleResultedDefect;
+        if (!detRes.isValid())
+            detRes = DetectCRPT(image.copy(), outDecoderResult,possibleResultedDefect);
 
-	if (detRes.isValid()) {
-		outDecoderResult = Decode(detRes.bits());
-		if(outDecoderResult.isValid()) {
-			return detRes;
-		}
-	}
-	//#OLD DETECTORS
+        if (detRes.isValid()) {
+            outDecoderResult = Decode(detRes.bits());
+            if(outDecoderResult.isValid()) {
+                return detRes;
+            }
+        }
+        //#OLD DETECTORS
 
-	//OLD DETECTORS WITH MY SAMPLE GRID
+        //OLD DETECTORS WITH MY SAMPLE GRID
 
-	Warp warp;
+        Warp warp;
 
-	detRes = DetectNew(image, tryHarder, tryRotate, &warp, true);
-	if (detRes.isValid()) {
-		outDecoderResult = Decode(detRes.bits());
-		if(outDecoderResult.isValid()) {
-			return detRes;
-		}
-	}
-	detRes = DetectCRPT(image.copy(), outDecoderResult, possibleResultedDefect, &warp, true);
+        detRes = DetectNew(image, tryHarder, tryRotate, &warp, true);
+        if (detRes.isValid()) {
+            outDecoderResult = Decode(detRes.bits());
+            if(outDecoderResult.isValid()) {
+                return detRes;
+            }
+        }
+        detRes = DetectCRPT(image.copy(), outDecoderResult, possibleResultedDefect, &warp, true);
 
-	if (detRes.isValid()) {
-		outDecoderResult = Decode(detRes.bits());
-		if(outDecoderResult.isValid()) {
-			return detRes;
-		}
-	}
-	//#OLD DETECTORS WITH MY SAMPLE GRID
+        if (detRes.isValid()) {
+            outDecoderResult = Decode(detRes.bits());
+            if(outDecoderResult.isValid()) {
+                return detRes;
+            }
+        }
+        //#OLD DETECTORS WITH MY SAMPLE GRID
 
 
         //MY DETECTOR
         // std::vector<double> cornersAsVector;
-	//MY DETECTOR
-	std::vector<double> cornersAsVector;
+        //MY DETECTOR
+        std::vector<double> cornersAsVector;
 
         // detRes = DetectNew(image, tryHarder, tryRotate, true, false);
         // outDecoderResult = Decode(detRes.bits());
         // if (outDecoderResult.isValid()) {
         // 	return detRes;
         // }
-	// detRes = DetectNew(image, tryHarder, tryRotate, true, false);
-	// outDecoderResult = Decode(detRes.bits());
-	// if (outDecoderResult.isValid()) {
-	// 	return detRes;
-	// }
+        // detRes = DetectNew(image, tryHarder, tryRotate, true, false);
+        // outDecoderResult = Decode(detRes.bits());
+        // if (outDecoderResult.isValid()) {
+        // 	return detRes;
+        // }
 
-    //     // detRes = DetectNew(image, tryHarder, tryRotate, true, true);
-    //     // outDecoderResult = Decode(detRes.bits());
-    //     // if (outDecoderResult.isValid()) {
-    //     // 	return detRes;
-    //     // }
-	// detRes = DetectNew(image, tryHarder, tryRotate, true, true);
-	// outDecoderResult = Decode(detRes.bits());
-	// if (outDecoderResult.isValid()) {
-	// 	return detRes;
-	// }
+        //     // detRes = DetectNew(image, tryHarder, tryRotate, true, true);
+        //     // outDecoderResult = Decode(detRes.bits());
+        //     // if (outDecoderResult.isValid()) {
+        //     // 	return detRes;
+        //     // }
+        // detRes = DetectNew(image, tryHarder, tryRotate, true, true);
+        // outDecoderResult = Decode(detRes.bits());
+        // if (outDecoderResult.isValid()) {
+        // 	return detRes;
+        // }
 
         // // for (int dim = 8; dim <= 44; dim+=2) {
         // for (int dim : CommonMatrixDimensions) {
-	// for (int dim = 8; dim <= 44; dim+=2) {
-	for (int dim : CommonMatrixDimensions) {
+        // for (int dim = 8; dim <= 44; dim+=2) {
+        for (int dim : CommonMatrixDimensions) {
 
-        // 	PointF P[] = {P0, P1, P2, P3};
-        // 	CorrectCorners(image, P[0], P[1], P[2], P[3], dim);
-        // 	int rotateSteps = FindRotation(image, P[0], P[1], P[2], P[3], dim);
-        // 	if(rotateSteps > 0) {
-        // 		PointF PP[4];
-        // 		std::copy(P, &P[4], PP);
-        // 		for(int i = 4; i--;) {
-        // 			P[(i+rotateSteps) % 4] = PP[i];
-        // 		}
-        // 	}
-        // 	//DEBUG DRAW
-		PointF P[] = {P0, P1, P2, P3};
-		CorrectCorners(image, P[0], P[1], P[2], P[3], dim);
-		int rotateSteps = FindRotation(image, P[0], P[1], P[2], P[3], dim);
-		if(rotateSteps > 0) {
-			PointF PP[4];
-			std::copy(P, &P[4], PP);
-			for(int i = 4; i--;) {
-				P[(i+rotateSteps) % 4] = PP[i];
-			}
-		}
-		//DEBUG DRAW
+            // 	PointF P[] = {P0, P1, P2, P3};
+            // 	CorrectCorners(image, P[0], P[1], P[2], P[3], dim);
+            // 	int rotateSteps = FindRotation(image, P[0], P[1], P[2], P[3], dim);
+            // 	if(rotateSteps > 0) {
+            // 		PointF PP[4];
+            // 		std::copy(P, &P[4], PP);
+            // 		for(int i = 4; i--;) {
+            // 			P[(i+rotateSteps) % 4] = PP[i];
+            // 		}
+            // 	}
+            // 	//DEBUG DRAW
+            PointF P[] = {P0, P1, P2, P3};
+            CorrectCorners(image, P[0], P[1], P[2], P[3], dim);
+            int rotateSteps = FindRotation(image, P[0], P[1], P[2], P[3], dim);
+            if(rotateSteps > 0) {
+                PointF PP[4];
+                std::copy(P, &P[4], PP);
+                for(int i = 4; i--;) {
+                    P[(i+rotateSteps) % 4] = PP[i];
+                }
+            }
+            //DEBUG DRAW
 
-        // 	auto postfix = std::to_string(dim);
-		auto postfix = std::to_string(dim);
+            // 	auto postfix = std::to_string(dim);
+            auto postfix = std::to_string(dim);
 
-        // 	// cornersAsVector = {P[0].x, P[0].y, P[1].x, P[1].y, P[2].x, P[2].y, P[3].x, P[3].y};
-        // 	// drawDebugImageWithLines(image, filename, cornersAsVector);
-		// cornersAsVector = {P[0].x, P[0].y, P[1].x, P[1].y, P[2].x, P[2].y, P[3].x, P[3].y};
-		// drawDebugImageWithLines(image, filename, cornersAsVector);
+            // 	// cornersAsVector = {P[0].x, P[0].y, P[1].x, P[1].y, P[2].x, P[2].y, P[3].x, P[3].y};
+            // 	// drawDebugImageWithLines(image, filename, cornersAsVector);
+            // cornersAsVector = {P[0].x, P[0].y, P[1].x, P[1].y, P[2].x, P[2].y, P[3].x, P[3].y};
+            // drawDebugImageWithLines(image, filename, cornersAsVector);
 
-        // 	//END DEBUG DRAW
-		//END DEBUG DRAW
+            // 	//END DEBUG DRAW
+            //END DEBUG DRAW
 
-        // 	auto&& [TL, BL, BR, TR] = P;
-		auto&& [TL, BL, BR, TR] = P;
+            // 	auto&& [TL, BL, BR, TR] = P;
+            auto&& [TL, BL, BR, TR] = P;
 
-        // 	detRes = SampleGridWarped(image, TL, BL, BR, TR, dim, dim);
-        // 	if (detRes.isValid()) {
-        // 		outDecoderResult = Decode(detRes.bits());
-        // 		if (outDecoderResult.isValid()) {
-        // 			// cornersAsVector = {P[0].y, P[0].x, P[1].y, P[1].x, P[2].y, P[2].x, P[3].y, P[3].x};
-        // 			// drawDebugImageWithLines(image, postfix, cornersAsVector);
-        // 			// drawDebugImage(detRes.bits(), postfix);
-        // 			return detRes;
-        // 		}
-        // 	}
-        // }
+            // 	detRes = SampleGridWarped(image, TL, BL, BR, TR, dim, dim);
+            // 	if (detRes.isValid()) {
+            // 		outDecoderResult = Decode(detRes.bits());
+            // 		if (outDecoderResult.isValid()) {
+            // 			// cornersAsVector = {P[0].y, P[0].x, P[1].y, P[1].x, P[2].y, P[2].x, P[3].y, P[3].x};
+            // 			// drawDebugImageWithLines(image, postfix, cornersAsVector);
+            // 			// drawDebugImage(detRes.bits(), postfix);
+            // 			return detRes;
+            // 		}
+            // 	}
+            // }
+            //#MY DETECTOR
+
+            auto warp = ComputeWarp(image, TL, BL, BR, TR, dim, dim, dim);
+
+            detRes = SampleGridWarped(image, TL, BL, BR, TR, dim, dim, warp);
+            if (detRes.isValid()) {
+                outDecoderResult = Decode(detRes.bits());
+                if (outDecoderResult.isValid()) {
+                    // cornersAsVector = {P[0].y, P[0].x, P[1].y, P[1].x, P[2].y, P[2].x, P[3].y, P[3].x};
+                    // drawDebugImageWithLines(image, postfix, cornersAsVector);
+                    // drawDebugImage(detRes.bits(), postfix);
+                    return detRes;
+                }
+            }
+        }
         //#MY DETECTOR
 
-		auto warp = ComputeWarp(image, TL, BL, BR, TR, dim, dim, dim);
-
-		detRes = SampleGridWarped(image, TL, BL, BR, TR, dim, dim, warp);
-		if (detRes.isValid()) {
-			outDecoderResult = Decode(detRes.bits());
-			if (outDecoderResult.isValid()) {
-				// cornersAsVector = {P[0].y, P[0].x, P[1].y, P[1].x, P[2].y, P[2].x, P[3].y, P[3].x};
-				// drawDebugImageWithLines(image, postfix, cornersAsVector);
-				// drawDebugImage(detRes.bits(), postfix);
-				return detRes;
-			}
-		}
-	}
-	//#MY DETECTOR
-
-    return {};
-}
+        return {};
+    }
 } // namespace ZXing::DataMatrix
 
 //DEBUG DRAW

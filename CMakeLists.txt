@@ -2,17 +2,17 @@ cmake_minimum_required(VERSION 3.15)
 
 project(ZXing)
 # Add these lines before find_package(OpenCV)
-set(OpenCV_DIR "/usr/local/lib/cmake/opencv3")  # Likely location of OpenCV 3.4 config
-set(OpenCV_FIND_VERSION "3.4")
-set(OpenCV_SHARED ON)  # Force using shared libraries (.so) instead of static (.a)
+#set(OpenCV_DIR "/usr/local/lib/cmake/opencv3")  # Likely location of OpenCV 3.4 config
+#set(OpenCV_FIND_VERSION "3.4")
+#set(OpenCV_SHARED ON)  # Force using shared libraries (.so) instead of static (.a)
+#
+## Then use find_package as normal
+#find_package(OpenCV 3.4 REQUIRED)
 
-# Then use find_package as normal
-find_package(OpenCV 3.4 REQUIRED)
 
-
-option (BUILD_WRITERS "Build with writer support (encoders)" ON)
+option (BUILD_WRITERS "Build with writer support (encoders)" OFF)
 option (BUILD_READERS "Build with reader support (decoders)" ON)
-option (BUILD_EXAMPLES "Build the example barcode reader/writer applications" ON)
+option (BUILD_EXAMPLES "Build the example barcode reader/writer applications" OFF)
 option (BUILD_BLACKBOX_TESTS "Build the black box reader/writer tests" OFF)
 option (BUILD_UNIT_TESTS "Build the unit tests (don't enable for production builds)" OFF)
 option (BUILD_PYTHON_MODULE "Build the python module" OFF)

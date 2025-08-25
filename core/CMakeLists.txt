@@ -9,13 +9,13 @@ if(NOT DEFINED BUILD_FOR_AARM OR NOT BUILD_FOR_AARM)
     # Linux build: use pkg-config for OpenCV
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(OpenCV REQUIRED opencv)
-    
+
     # Create OpenCV interface target for compatibility
     add_library(opencv_interface INTERFACE)
     target_include_directories(opencv_interface INTERFACE ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(opencv_interface INTERFACE ${OpenCV_LIBRARIES})
     target_compile_options(opencv_interface INTERFACE ${OpenCV_CFLAGS_OTHER})
-    
+
     # Set variables for later use
     set(OpenCV_FOUND TRUE)
     set(OpenCV_LIBS opencv_interface)
@@ -477,6 +477,57 @@ if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
     # endif()
     set(OpenCV_LIBS "")
 endif()
+
+# Enforce 16K/64K page size on the final link of libZXing.so
+if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
+    # Preferred (CMake 3.13+): attaches to this target's link line
+    target_link_options(ZXing PRIVATE
+            "LINKER:-z,common-page-size=4096"
+            "LINKER:-z,max-page-size=65536"
+    )
+
+    # Fallback for older generators: append raw linker flags to this target
+    set_property(TARGET ZXing APPEND_STRING PROPERTY LINK_FLAGS
+            " -Wl,-z,common-page-size=4096 -Wl,-z,max-page-size=65536")
+endif()
+
+
+if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
+    find_library(log-lib log)
+    if(log-lib)
+        target_link_libraries(ZXing PRIVATE ${log-lib})
+    endif()
+endif()
+
+
+if(BUILD_FOR_AARM)
+    # Apply to all targets created below (in case of future changes)
+    add_link_options(
+            "-Wl,-z,common-page-size=4096"
+            "-Wl,-z,max-page-size=65536"
+    )
+    # Keep the legacy variables too for older generators
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,common-page-size=4096 -Wl,-z,max-page-size=65536")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,common-page-size=4096 -Wl,-z,max-page-size=65536")
+    set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}    -Wl,-z,common-page-size=4096 -Wl,-z,max-page-size=65536")
+endif()
+
+
+
+if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
+    find_program(READELF NAMES llvm-readelf readelf)
+    if(READELF)
+        add_custom_command(TARGET ZXing POST_BUILD
+                COMMAND ${READELF} -l $<TARGET_FILE:ZXing> > $<TARGET_FILE_DIR:ZXing>/zxing.readelf.txt
+                COMMAND ${CMAKE_COMMAND} -DREAD_ELF_FILE=$<TARGET_FILE_DIR:ZXing>/zxing.readelf.txt
+                -P ${CMAKE_CURRENT_LIST_DIR}/CheckZxingAlign.cmake
+                COMMENT "Verifying libZXing.so page alignment")
+    else()
+        message(WARNING "readelf not found; skipping alignment check")
+    endif()
+endif()
+
+
 target_include_directories (ZXing
         PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>" "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
         INTERFACE "$<INSTALL_INTERFACE:include>"

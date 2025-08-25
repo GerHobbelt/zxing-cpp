@@ -1194,8 +1194,8 @@ namespace ZXing::DataMatrix {
         if(offsetMap.cols != outputSize) {
             offsetMap = cv::Mat(1, outputSize, CV_32F);
 
-            constexpr const int vec_size = cv::v_float32::nlanes;
-            constexpr size_t simd_alignment = cv::v_float32::nlanes * sizeof(float);
+            constexpr const int vec_size = cv::v_float32x4::nlanes;
+            constexpr size_t simd_alignment = cv::v_float32x4::nlanes * sizeof(float);
             float* mapRow = offsetMap.ptr<float>(0);
             int i = 0;
             alignas(simd_alignment) float tmp[vec_size];
@@ -1203,12 +1203,12 @@ namespace ZXing::DataMatrix {
             for(int k = 0; k < vec_size; k++) {
                 tmp2[k] = k;
             }
-            cv::v_float32 indexAdd = cv::v_load_aligned(tmp2);
+            cv::v_float32x4 indexAdd = cv::v_load_aligned(tmp2);
             float indexMul = 2.0 / float(outputSize - 1);
 
             for (; i <= outputSize - vec_size; i += vec_size) {
 
-                cv::v_float32 v_val = (cv::v_setall_f32(static_cast<float>(i)) + indexAdd) * cv::v_setall_f32(indexMul);
+                cv::v_float32x4 v_val = (cv::v_setall_f32(static_cast<float>(i)) + indexAdd) * cv::v_setall_f32(indexMul);
 
                 v_val = cv::v_abs(v_val - cv::v_setall_f32(1.0));
                 cv::v_store_aligned(tmp, v_val);

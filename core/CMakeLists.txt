@@ -566,6 +566,18 @@ add_library(ZXing::ZXing ALIAS ZXing)
 #       for clients using the exported target, see ZXingConfig.cmake.in
 add_library(ZXing::Core ALIAS ZXing)
 
+
+if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
+  # Ensure we link against the shared STL
+  find_library(cpp_shared c++_shared)
+  if(cpp_shared)
+    target_link_libraries(ZXing PRIVATE ${cpp_shared})
+    # Copy libc++_shared.so next to libZXing.so so your script/packager can pick it up
+    add_custom_command(TARGET ZXing POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${cpp_shared}" "$<TARGET_FILE_DIR:ZXing>/libc++_shared.so"
+      COMMENT "Copying libc++_shared.so")
+  endif()
+endif()
 set_target_properties(ZXing PROPERTIES EXPORT_NAME ZXing)
 # force position independent code to be able to link it as static lib into a DLL (e.g. the python module)
 set_target_properties(ZXing PROPERTIES POSITION_INDEPENDENT_CODE ON)

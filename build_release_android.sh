@@ -48,7 +48,7 @@ get_linker_flags() {
 echo "Building for arm64-v8a..."
 rm -rf *  # Clean the release directory
 ARCH_LINKER_FLAGS=$(get_linker_flags "arm64-v8a")
-cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=arm64-v8a -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON
+cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=arm64-v8a -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON -DANDROID_STL=c++_shared
 
 if [ ! -f "Makefile" ]; then
     echo "❌ CMake failed to generate Makefile for arm64-v8a"
@@ -59,6 +59,7 @@ make -j 16
 
 if [ -f "core/libZXing.so" ]; then
     cp core/libZXing.so ../arm64-v8a/
+    cp core/libc++_shared.so ../arm64-v8a/
     file ../arm64-v8a/libZXing.so
     echo "✅ arm64-v8a build successful"
 else
@@ -69,7 +70,7 @@ fi
 echo "Building for armeabi-v7a..."
 rm -rf *  # Clean the release directory
 ARCH_LINKER_FLAGS=$(get_linker_flags "armeabi-v7a")
-cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=armeabi-v7a -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON
+cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=armeabi-v7a -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON -DANDROID_STL=c++_shared
 
 if [ ! -f "Makefile" ]; then
     echo "❌ CMake failed to generate Makefile for armeabi-v7a"
@@ -80,6 +81,7 @@ make -j 16
 
 if [ -f "core/libZXing.so" ]; then
     cp core/libZXing.so ../armeabi-v7a/
+    cp core/libc++_shared.so ../armeabi-v7a/
     file ../armeabi-v7a/libZXing.so
     echo "✅ armeabi-v7a build successful"
 else
@@ -90,7 +92,7 @@ fi
 echo "Building for x86..."
 rm -rf *  # Clean the release directory
 ARCH_LINKER_FLAGS=$(get_linker_flags "x86")
-cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=x86 -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON
+cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=x86 -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON -DANDROID_STL=c++_shared
 
 if [ ! -f "Makefile" ]; then
     echo "❌ CMake failed to generate Makefile for x86"
@@ -101,6 +103,7 @@ make -j 16
 
 if [ -f "core/libZXing.so" ]; then
     cp core/libZXing.so ../x86/
+    cp core/libc++_shared.so ../x86/
     file ../x86/libZXing.so
     echo "✅ x86 build successful"
 else
@@ -111,7 +114,7 @@ fi
 echo "Building for x86_64..."
 rm -rf *  # Clean the release directory
 ARCH_LINKER_FLAGS=$(get_linker_flags "x86_64")
-cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=x86_64 -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON
+cmake -B . -S .. -DCMAKE_TOOLCHAIN_FILE="$CMAKE_TOOLCHAIN_FILE" -DOpenCV_DIR="$OPENCV_JNI_PATH" -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" -DANDROID_ABI=x86_64 -DANDROID_NATIVE_API_LEVEL=21 -DCMAKE_SHARED_LINKER_FLAGS="$ARCH_LINKER_FLAGS" -DBUILD_FOR_AARM=ON -DANDROID_STL=c++_shared
 
 if [ ! -f "Makefile" ]; then
     echo "❌ CMake failed to generate Makefile for x86_64"
@@ -122,6 +125,7 @@ make -j 16
 
 if [ -f "core/libZXing.so" ]; then
     cp core/libZXing.so ../x86_64/
+    cp core/libc++_shared.so ../x86_64/
     file ../x86_64/libZXing.so
     echo "✅ x86_64 build successful"
 else

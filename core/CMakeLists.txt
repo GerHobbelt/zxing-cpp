@@ -469,13 +469,28 @@ add_library (ZXing
 # Only call find_package(OpenCV) for Android builds
 # Linux builds use pkg-config (configured earlier)
 if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
-    find_package(OpenCV REQUIRED COMPONENTS core imgproc PATHS ${OpenCV_DIR} NO_DEFAULT_PATH)
-    # if (OpenCV_DIR)
-    #     find_package(OpenCV REQUIRED PATHS ${OpenCV_DIR} NO_DEFAULT_PATH)
-    # else()
-    #     find_package(OpenCV)
-    # endif()
-    set(OpenCV_LIBS "")
+   # If OpenCV_DIR is not provided, try to infer from Bazel android_opencv or common Android SDK layout
+   if(NOT OpenCV_DIR)
+       # Allow passing OPENCV_ANDROID_SDK native root (ending with sdk/native)
+       if(DEFINED OPENCV_ANDROID_SDK)
+           set(OpenCV_DIR "${OPENCV_ANDROID_SDK}/jni")
+       endif()
+       # Try Bazel external android_opencv
+       if(NOT OpenCV_DIR AND DEFINED BAZEL_OPENJDK_PATH) # cheap signal of bazel env
+           set(_BAZEL_ANDROID_OPENCV "$ENV{HOME}/.cache/bazel/_bazel_$ENV{USER}/*/external/android_opencv/sdk/native/jni")
+           # This is a hint; actual path resolution happens in the build script
+       endif()
+   endif()
+
+   # Prefer config files in ABI-specific subdirs when OpenCV provides them
+   if(OpenCV_DIR AND ANDROID_ABI)
+       if(EXISTS "${OpenCV_DIR}/abi-${ANDROID_ABI}/OpenCVConfig.cmake")
+           set(OpenCV_DIR "${OpenCV_DIR}/abi-${ANDROID_ABI}")
+       endif()
+   endif()
+
+   find_package(OpenCV REQUIRED COMPONENTS core imgproc PATHS ${OpenCV_DIR} NO_DEFAULT_PATH)
+   set(OpenCV_LIBS "")
 endif()
 
 # Enforce 16K/64K page size on the final link of libZXing.so

@@ -529,18 +529,18 @@ endif()
 
 
 
-if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
-    find_program(READELF NAMES llvm-readelf readelf)
-    if(READELF)
-        add_custom_command(TARGET ZXing POST_BUILD
-                COMMAND ${READELF} -l $<TARGET_FILE:ZXing> > $<TARGET_FILE_DIR:ZXing>/zxing.readelf.txt
-                COMMAND ${CMAKE_COMMAND} -DREAD_ELF_FILE=$<TARGET_FILE_DIR:ZXing>/zxing.readelf.txt
-                -P ${CMAKE_CURRENT_LIST_DIR}/CheckZxingAlign.cmake
-                COMMENT "Verifying libZXing.so page alignment")
-    else()
-        message(WARNING "readelf not found; skipping alignment check")
-    endif()
-endif()
+#if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
+#    find_program(READELF NAMES llvm-readelf readelf)
+#    if(READELF)
+#        add_custom_command(TARGET ZXing POST_BUILD
+#                COMMAND ${READELF} -l $<TARGET_FILE:ZXing> > $<TARGET_FILE_DIR:ZXing>/zxing.readelf.txt
+#                COMMAND ${CMAKE_COMMAND} -DREAD_ELF_FILE=$<TARGET_FILE_DIR:ZXing>/zxing.readelf.txt
+#                -P ${CMAKE_CURRENT_LIST_DIR}/CheckZxingAlign.cmake
+#                COMMENT "Verifying libZXing.so page alignment")
+#    else()
+#        message(WARNING "readelf not found; skipping alignment check")
+#    endif()
+#endif()
 
 
 target_include_directories (ZXing

@@ -59,7 +59,7 @@ CMAKE_CXX_FLAGS="-std=c++17 -I${OPENCV_INCLUDE_PATH} -DCV_CPU_HAS_SUPPORT_NEON=0
 # Function to get architecture-specific linking flags
 get_linker_flags() {
     local arch=$1
-    echo "-llog -Wl,-z,common-page-size=4096 -Wl,-z,max-page-size=65536 -L${OPENCV_LIBS_PATH}/${arch} -lopencv_java3"
+    echo "-llog -Wl,-z,common-page-size=4096 -Wl,-z,max-page-size=65536 -L${OPENCV_LIBS_PATH}/${arch} -lopencv_java4"
 }
 
 # Build for arm64-v8a

@@ -1,30 +1,38 @@
 cmake_minimum_required(VERSION 3.15)
 
-project (ZXing VERSION "2.0.0")
+if(NOT DEFINED PROJECT_VERSION OR "${PROJECT_VERSION}" STREQUAL "")
+    set(PROJECT_VERSION "2.0.0")
+endif()
 
-# Add these lines before find_package(OpenCV)
-# For Android builds, OpenCV_DIR will be set by the build script
-# For Linux builds, use pkg-config to avoid static/shared library issues
 if(NOT DEFINED BUILD_FOR_AARM OR NOT BUILD_FOR_AARM)
-    # Linux build: use pkg-config for OpenCV
+    # Linux build: prefer OpenCV 4 via pkg-config, fallback to opencv (3.x)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(OpenCV REQUIRED opencv)
+    pkg_check_modules(OpenCV opencv4)
+    if(NOT OpenCV_FOUND)
+        pkg_check_modules(OpenCV REQUIRED opencv)
+    endif()
 
-    # Create OpenCV interface target for compatibility
     add_library(opencv_interface INTERFACE)
     target_include_directories(opencv_interface INTERFACE ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(opencv_interface INTERFACE ${OpenCV_LIBRARIES})
     target_compile_options(opencv_interface INTERFACE ${OpenCV_CFLAGS_OTHER})
 
-    # Set variables for later use
     set(OpenCV_FOUND TRUE)
     set(OpenCV_LIBS opencv_interface)
 else()
-    # Android build: use CMake configuration
-    set(OpenCV_FIND_VERSION "3.4")
-    set(OpenCV_SHARED ON)  # Force using shared libraries (.so) instead of static (.a)
-    set(BUILD_SHARED_LIBS ON)  # Force shared libraries globally
+    # Android build: use OpenCV Android SDK (OpenCVConfig.cmake)
+    set(OpenCV_FIND_VERSION "4.0")
+    set(OpenCV_SHARED ON)
+    set(BUILD_SHARED_LIBS ON)
+
+    # Point OpenCV_DIR to ABI-specific config if present
+    if(OpenCV_DIR AND ANDROID_ABI AND EXISTS "${OpenCV_DIR}/abi-${ANDROID_ABI}/OpenCVConfig.cmake")
+        set(OpenCV_DIR "${OpenCV_DIR}/abi-${ANDROID_ABI}")
+    endif()
+
+    find_package(OpenCV REQUIRED PATHS ${OpenCV_DIR} NO_DEFAULT_PATH)
 endif()
+
 
 set (ZXING_SONAME 3) # see https://github.com/zxing-cpp/zxing-cpp/issues/333
 
@@ -490,7 +498,7 @@ if(DEFINED BUILD_FOR_AARM AND BUILD_FOR_AARM)
    endif()
 
    find_package(OpenCV REQUIRED COMPONENTS core imgproc PATHS ${OpenCV_DIR} NO_DEFAULT_PATH)
-   set(OpenCV_LIBS "")
+#   set(OpenCV_LIBS "")
 endif()
 
 # Enforce 16K/64K page size on the final link of libZXing.so

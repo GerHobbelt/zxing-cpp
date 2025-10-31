@@ -1252,12 +1252,30 @@ namespace ZXing::DataMatrix {
 
     }
 
+	float very_fast_cos(float x) {
+		constexpr float two_pi = 2.0f * M_PI;
+		constexpr float inv_two_pi = 1.0f / two_pi;
+		
+		x -= two_pi * static_cast<int>(x * inv_two_pi);
+		
+		if (x > M_PI) x = two_pi - x;
+		float x_abs = (x < 0) ? -x : x;
+		
+		constexpr float a = -0.25f;
+		constexpr float b = 1.0f;
+		
+		return a * x_abs * x_abs + b;
+	}
+
     void createMaps(cv::Mat& mapXY, int outputSize, bool horizontal, bool inverse) {
         mapXY.create(outputSize, outputSize, CV_32FC2);
 
         float factor = float(outputSize) / 7.6 * 0.5;
 
         static cv::Mat offsetMap;
+
+		constexpr size_t alignment = VEC_SIZE * 4;
+		constexpr size_t elements_per_vector = VEC_SIZE;
 
         if(offsetMap.cols != outputSize) {
             offsetMap = cv::Mat(1, outputSize, CV_32F);
@@ -1266,14 +1284,25 @@ namespace ZXing::DataMatrix {
             size_t i = 0;
 			float* mapRow = offsetMap.ptr<float>(0);
 
-			for (; i <= outputSize - VEC_SIZE; i += VEC_SIZE) {
-				for(size_t j = 0; j < VEC_SIZE; ++j ) {
-					size_t ii = i + j;
-	                mapRow[ii] = (std::cos(std::fabs(float(ii) * indexMul - 1.0)) - 0.75) * factor;
+			while ((reinterpret_cast<uintptr_t>(mapRow + i) & (alignment - 1)) != 0 && i < outputSize) {
+				mapRow[i] = (very_fast_cos(std::fabs(float(i) * indexMul - 1.0f)) - 0.75) * factor;
+				i++;
+			}
+
+			if (i + elements_per_vector <= outputSize) {
+				const size_t aligned_size = (outputSize - i) & ~(elements_per_vector - 1);
+				float* aligned_data = static_cast<float*>(__builtin_assume_aligned(mapRow + i, alignment));
+
+				for (size_t j = 0; j < aligned_size; j+=VEC_SIZE) {
+					for(size_t jj = 0; jj < VEC_SIZE; jj++) {
+						size_t ij = j + jj;
+						aligned_data[ij] = (very_fast_cos(std::abs(float(i++) * indexMul - 1.0f)) - 0.75) * factor;
+					}
 				}
 			}
+
 			for (; i < outputSize; ++i) {
-                mapRow[i] = (std::cos(std::fabs(float(i) * indexMul - 1.0)) - 0.75) * factor;
+                mapRow[i] = (very_fast_cos(std::abs(float(i) * indexMul - 1.0f)) - 0.75) * factor;
             }
         }
 

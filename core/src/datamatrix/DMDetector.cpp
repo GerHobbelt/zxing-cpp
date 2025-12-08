@@ -319,10 +319,11 @@ namespace ZXing::DataMatrix {
 		auto doubleLine = testDoubleLine(res.bits());
 
 		if(doubleLine.any()) {
-			PointF tl = mod2Pix({0, 0});
-			PointF tr = mod2Pix({width, 0});
-			PointF bl = mod2Pix({0, height});
-			PointF br = mod2Pix({ width, height});
+			PointF wh = {static_cast<float>(width), static_cast<float>(height)};
+			PointF tl = mod2Pix({0.0, 0.0});
+			PointF tr = mod2Pix({wh.x, 0.0});
+			PointF bl = mod2Pix({0.0, wh.y});
+			PointF br = mod2Pix(wh);
 
 			float dimInv = 0.62 / float(width);
 			PointF DirTopLR = dimInv * (tr - tl);

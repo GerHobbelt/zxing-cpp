@@ -19,7 +19,7 @@
 #include "ODDXFilmEdgeReader.h"
 #include "ODITFReader.h"
 #include "ODMultiUPCEANReader.h"
-#include "Barcode.h"
+#include "BarcodeData.h"
 
 #include <algorithm>
 #include <utility>
@@ -28,15 +28,6 @@
 #include "BitMatrix.h"
 #include "BitMatrixIO.h"
 #endif
-
-namespace ZXing {
-
-void IncrementLineCount(Barcode& r)
-{
-	++r._lineCount;
-}
-
-} // namespace ZXing
 
 namespace ZXing::OneD {
 
@@ -80,10 +71,10 @@ Reader::~Reader() = default;
 * decided that moving up and down by about 1/16 of the image is pretty good; we try more of the
 * image if "trying harder".
 */
-static Barcodes DoDecode(const std::vector<std::unique_ptr<RowReader>>& readers, const BinaryBitmap& image, bool tryHarder,
+BarcodesData DoDecode(const std::vector<std::unique_ptr<RowReader>>& readers, const BinaryBitmap& image, bool tryHarder,
 						 bool rotate, bool isPure, int maxSymbols, int minLineCount, bool returnErrors)
 {
-	Barcodes res;
+	BarcodesData res;
 
 	std::vector<std::unique_ptr<RowReader::DecodingState>> decodingState(readers.size());
 
@@ -169,49 +160,43 @@ static Barcodes DoDecode(const std::vector<std::unique_ptr<RowReader>>& readers,
 
 				PatternView next(bars);
 				do {
-					Barcode result = readers[r]->decodePattern(rowNumber, next, decodingState[r]);
-					if (result.isValid() || (returnErrors && result.error())) {
-						IncrementLineCount(result);
+					BarcodeData result = readers[r]->decodePattern(rowNumber, next, decodingState[r]);
+					if (result.isValid() || (returnErrors && result.error)) {
+						result.lineCount++;
 						if (upsideDown) {
 							// update position (flip horizontally).
-							auto points = result.position();
-							for (auto& p : points) {
+							for (auto& p : result.position) {
 								p = {width - p.x - 1, p.y};
 							}
-							result.setPosition(std::move(points));
 						}
 						if (rotate) {
-							auto points = result.position();
-							for (auto& p : points) {
+							for (auto& p : result.position) {
 								p = {p.y, width - p.x - 1};
 							}
-							result.setPosition(std::move(points));
 						}
 
 						// check if we know this code already
 						for (auto& other : res) {
 							if (result == other) {
 								// merge the position information
-								auto dTop = maxAbsComponent(other.position().topLeft() - result.position().topLeft());
-								auto dBot = maxAbsComponent(other.position().bottomLeft() - result.position().topLeft());
-								auto points = other.position();
-								if (dTop < dBot || (dTop == dBot && rotate ^ (sumAbsComponent(points[0]) >
-																			  sumAbsComponent(result.position()[0])))) {
-									points[0] = result.position()[0];
-									points[1] = result.position()[1];
+								auto dTop = maxAbsComponent(other.position.topLeft() - result.position.topLeft());
+								auto dBot = maxAbsComponent(other.position.bottomLeft() - result.position.topLeft());
+								if (dTop < dBot || (dTop == dBot && rotate ^ (sumAbsComponent(other.position[0]) >
+																			  sumAbsComponent(result.position[0])))) {
+									other.position[0] = result.position[0];
+									other.position[1] = result.position[1];
 								} else {
-									points[2] = result.position()[2];
-									points[3] = result.position()[3];
+									other.position[2] = result.position[2];
+									other.position[3] = result.position[3];
 								}
-								other.setPosition(points);
-								IncrementLineCount(other);
+								other.lineCount++;
 								// clear the result, so we don't insert it again below
-								result = Barcode();
+								result = BarcodeData();
 								break;
 							}
 						}
 
-						if (result.format() != BarcodeFormat::None) {
+						if (result.format != BarcodeFormat::None) {
 							res.push_back(std::move(result));
 
 							// if we found a valid code we have not seen before but a minLineCount > 1,
@@ -223,8 +208,8 @@ static Barcodes DoDecode(const std::vector<std::unique_ptr<RowReader>>& readers,
 							}
 						}
 
-						if (maxSymbols && Reduce(res, 0, [&](int s, const Barcode& r) {
-											  return s + (r.lineCount() >= minLineCount);
+						if (maxSymbols && Reduce(res, 0, [&](int s, const BarcodeData& r) {
+											  return s + (r.lineCount >= minLineCount);
 										  }) == maxSymbols) {
 							goto out;
 						}
@@ -240,22 +225,22 @@ static Barcodes DoDecode(const std::vector<std::unique_ptr<RowReader>>& readers,
 out:
 	// remove all symbols with insufficient line count
 #ifdef __cpp_lib_erase_if
-	std::erase_if(res, [&](auto&& r) { return r.lineCount() < minLineCount; });
+	std::erase_if(res, [&](auto&& r) { return r.lineCount < minLineCount; });
 #else
-	auto it = std::remove_if(res.begin(), res.end(), [&](auto&& r) { return r.lineCount() < minLineCount; });
+	auto it = std::remove_if(res.begin(), res.end(), [&](auto&& r) { return r.lineCount < minLineCount; });
 	res.erase(it, res.end());
 #endif
 
 	// if symbols overlap, remove the one with a lower line count
 	for (auto a = res.begin(); a != res.end(); ++a)
 		for (auto b = std::next(a); b != res.end(); ++b)
-			if (HaveIntersectingBoundingBoxes(a->position(), b->position()))
-				*(a->lineCount() < b->lineCount() ? a : b) = Barcode();
+			if (HaveIntersectingBoundingBoxes(a->position, b->position))
+				*(a->lineCount < b->lineCount ? a : b) = BarcodeData();
 
 #ifdef __cpp_lib_erase_if
-	std::erase_if(res, [](auto&& r) { return r.format() == BarcodeFormat::None; });
+	std::erase_if(res, [](auto&& r) { return r.format == BarcodeFormat::None; });
 #else
-	it = std::remove_if(res.begin(), res.end(), [](auto&& r) { return r.format() == BarcodeFormat::None; });
+	it = std::remove_if(res.begin(), res.end(), [](auto&& r) { return r.format == BarcodeFormat::None; });
 	res.erase(it, res.end());
 #endif
 
@@ -266,25 +251,14 @@ out:
 	return res;
 }
 
-Barcode Reader::decode(const BinaryBitmap& image) const
+BarcodesData Reader::read(const BinaryBitmap& image, int maxSymbols) const
 {
-	auto result =
-		DoDecode(_readers, image, _opts.tryHarder(), false, _opts.isPure(), 1, _opts.minLineCount(), _opts.returnErrors());
-	
-	if (result.empty() && _opts.tryRotate())
-		result = DoDecode(_readers, image, _opts.tryHarder(), true, _opts.isPure(), 1, _opts.minLineCount(), _opts.returnErrors());
-
-	return FirstOrDefault(std::move(result));
-}
-
-Barcodes Reader::decode(const BinaryBitmap& image, int maxSymbols) const
-{
-	auto resH = DoDecode(_readers, image, _opts.tryHarder(), false, _opts.isPure(), maxSymbols, _opts.minLineCount(),
-						 _opts.returnErrors());
+	auto resH =
+		DoDecode(_readers, image, _opts.tryHarder(), false, _opts.isPure(), maxSymbols, _opts.minLineCount(), _opts.returnErrors());
 	if ((!maxSymbols || Size(resH) < maxSymbols) && _opts.tryRotate()) {
 		auto resV = DoDecode(_readers, image, _opts.tryHarder(), true, _opts.isPure(), maxSymbols - Size(resH),
-							 _opts.minLineCount(), _opts.returnErrors());
-		resH.insert(resH.end(), resV.begin(), resV.end());
+								 _opts.minLineCount(), _opts.returnErrors());
+		resH.insert(resH.end(), std::make_move_iterator(resV.begin()), std::make_move_iterator(resV.end()));
 	}
 	return resH;
 }

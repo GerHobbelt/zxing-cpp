@@ -73,25 +73,14 @@ MultiFormatReader::MultiFormatReader(const ReaderOptions& opts) : _opts(opts)
 
 MultiFormatReader::~MultiFormatReader() = default;
 
-Barcode MultiFormatReader::read(const BinaryBitmap& image) const
-{
-	Barcode r;
-	for (const auto& reader : _readers) {
-		r = reader->decode(image);
-  		if (r.isValid())
-			return r;
-	}
-	return _opts.returnErrors() ? r : Barcode();
-}
-
-Barcodes MultiFormatReader::readMultiple(const BinaryBitmap& image, int maxSymbols) const
+Barcodes MultiFormatReader::read(const BinaryBitmap& image, int maxSymbols) const
 {
 	Barcodes res;
 
 	for (const auto& reader : _readers) {
 		if (image.inverted() && !reader->supportsInversion)
 			continue;
-		auto r = reader->decode(image, maxSymbols);
+		auto r = reader->read(image, maxSymbols);
 		if (!_opts.returnErrors()) {
 #ifdef __cpp_lib_erase_if
 			std::erase_if(r, [](auto&& s) { return !s.isValid(); });
